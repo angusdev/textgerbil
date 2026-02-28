@@ -590,6 +590,32 @@ const { JSDOM } = require('jsdom');
         'Tab switch focuses text editor area'
       );
 
+      // Test 40: Preview enabled only for markdown/html
+      const previewToggle = doc.getElementById('togglePreview');
+      const previewPanel = doc.getElementById('preview');
+      const previewTabId = focusSourceId;
+      w.__textgerbil.selectTab(previewTabId);
+      doc.getElementById('modeSelect').value = 'text';
+      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+
+      doc.getElementById('languageSelect').value = 'python';
+      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      const previewTab = w.__textgerbil.tabs.find(x => x.id === previewTabId);
+      const beforePythonToggle = !!previewTab.previewVisible;
+      previewToggle.click();
+      assert(previewTab.previewVisible === beforePythonToggle, 'Preview toggle ignored for non-markdown/html language');
+      assert(previewPanel.classList.contains('hidden'), 'Preview stays hidden for non-markdown/html language');
+
+      doc.getElementById('languageSelect').value = 'markdown';
+      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      previewToggle.click();
+      assert(previewTab.previewVisible === true, 'Preview toggle works for markdown');
+      assert(!previewPanel.classList.contains('hidden'), 'Preview shows for markdown');
+
+      doc.getElementById('languageSelect').value = 'htmlmixed';
+      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      assert(!previewPanel.classList.contains('hidden'), 'Preview remains available for HTML');
+
     } catch (e) {
       console.error('test error', e);
       testsFailed++;

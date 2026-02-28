@@ -50,6 +50,8 @@
     .small{padding:6px 10px;font-size:13px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1}
     .small:hover{background:#f8fafc}
     .small.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .small:disabled{opacity:.45;color:#64748b;background:#f1f5f9;border-color:#e2e8f0;cursor:not-allowed;filter:saturate(.35)}
+    .small:disabled:hover{background:#f1f5f9}
     .icon{width:14px;height:14px;display:inline-block}
   </style>
 </head>
@@ -503,7 +505,8 @@
     function applyPreviewVisibility(tab){
       const preview = document.getElementById('preview');
       if(!preview) return;
-      const shouldShow = tab && tab.mode !== 'notepad' && !!tab.previewVisible;
+      const canPreview = tab && tab.mode === 'text' && (tab.language === 'markdown' || tab.language === 'htmlmixed');
+      const shouldShow = !!canPreview && !!tab.previewVisible;
       preview.classList.toggle('hidden', !shouldShow);
     }
 
@@ -562,6 +565,10 @@
       const preview=document.getElementById('preview');
       const btn=document.getElementById('togglePreview');
       if(!preview||!btn) return;
+      const t=tabs.find(x=>x.id===activeId);
+      const canPreview=t && t.mode==='text' && (t.language==='markdown' || t.language==='htmlmixed');
+      btn.disabled=!canPreview;
+      btn.title=canPreview?'Toggle preview':'Preview available only for Markdown/HTML';
       const isVisible=!preview.classList.contains('hidden');
       btn.classList.toggle('is-active', isVisible);
       btn.setAttribute('aria-pressed', String(isVisible));
@@ -586,16 +593,21 @@
       const t=tabs.find(x=>x.id===activeId);
       if(t && t.mode==='text'){
         t.language=e.target.value;
+        if(t.language!=='markdown' && t.language!=='htmlmixed'){
+          t.previewVisible=false;
+        }
         if(editors[t.id] && editors[t.id].cm){
           editors[t.id].cm.setOption('mode', t.language);
         }
         save();
         updatePreview();
+        applyPreviewVisibility(t);
+        syncPreviewToggleState();
       }
     })
     document.getElementById('togglePreview').onclick=()=>{
       const t=tabs.find(x=>x.id===activeId);
-      if(!t || t.mode==='notepad') return;
+      if(!t || t.mode!=='text' || (t.language!=='markdown' && t.language!=='htmlmixed')) return;
       t.previewVisible = !t.previewVisible;
       applyPreviewVisibility(t);
       save();
