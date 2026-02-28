@@ -60,10 +60,11 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
 ## Development / Testing
 
 1. The file is self-contained; to make edits, modify `index.html`.
-2. For automated testing, run the comprehensive headless test suite:
+2. Use Node.js 24 (`nvm use` reads `.nvmrc`).
+3. Install dependencies and run the headless test suite:
    ```bash
-   npm install jsdom@21 --no-save
-   node test/run_headless_test.js
+   npm install
+   npm test
    ```
    The test suite (`test/run_headless_test.js`) includes **25+ test cases** covering:
    (recent additions include a case that closes a tab via the UI and ensures no JavaScript exception is thrown – this caught and fixed a bug where closing a CodeMirror tab could trigger errors.  Editor initialization now defensively checks `toTextArea()` before invoking it to prevent type errors when switching tabs.)

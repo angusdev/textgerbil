@@ -142,8 +142,9 @@ catches syntax errors, runtime issues, and feature regressions.
 To run:
 
 ```bash
-npm install jsdom@21 --no-save
-node test/run_headless_test.js
+nvm use
+npm install
+npm test
 ```
 
 Expected output: `Passed: 25, Failed: 0`
