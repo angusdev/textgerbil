@@ -11,14 +11,10 @@ in the browser. A live demo is available at https://<your-user>.github.io/textge
 
 ## Features
 
-- Multi-tab editing with mode per tab:
-  - Plain text
-  - Programming (CodeMirror syntax highlighting)
-  - Markdown (with live preview)
-  - Rich text (Quill editor)
-  - HTML (previewed in sandboxed iframe)
+- Multi-tab editing with 3 modes per tab:
+  - Text editing
+  - Rich Text (Quill editor)
   - Notepad (multiple short notes in one tab)
-- Live preview sidebar for Markdown and HTML
 - Themes (font family, size, background/foreground) per-tab or globally
 - Import and export files
 - Keyboard shortcuts (desktop style)
@@ -34,7 +30,7 @@ in the browser. A live demo is available at https://<your-user>.github.io/textge
    browser (Chrome, Firefox, Edge, Safari).
 2. The first tab appears automatically; use the **+ New** button or
    `Ctrl/Cmd+T` to create additional tabs.
-3. Change the editor mode using the dropdown.
+3. Change the editor mode (Text editing, Rich Text, or Notepad) using the dropdown.
 4. Toggle the preview sidebar with the **Preview** button.
 5. Edit text – changes are saved automatically in local storage.
 6. **Rename a tab** by double-clicking its title to edit inline. Press Enter
@@ -69,7 +65,7 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
    The test suite (`test/run_headless_test.js`) includes **25+ test cases** covering:
    (recent additions include a case that closes a tab via the UI and ensures no JavaScript exception is thrown – this caught and fixed a bug where closing a CodeMirror tab could trigger errors.  Editor initialization now defensively checks `toTextArea()` before invoking it to prevent type errors when switching tabs.)
    - Tab creation, switching, and renaming (both API and UI double-click)
-   - All 6 editor modes (plain, code, markdown, rich, html, notepad)
+   - All 3 editor modes (text editing, rich text, notepad)
    - Content editing and storage per mode
    - Notepad operations (adding and editing notes)
    - Theme settings (open, configure, apply to current or all tabs)
