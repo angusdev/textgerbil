@@ -49,55 +49,54 @@
     .btn{background:var(--accent);color:#fff;padding:6px 10px;border-radius:8px;border:none;cursor:pointer}
     .small{padding:6px 10px;font-size:13px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1}
     .small:hover{background:#f8fafc}
+    .small.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
     .icon{width:14px;height:14px;display:inline-block}
   </style>
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900">
   <div class="app min-h-screen flex flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-sky-100">
-    <header class="flex items-center gap-3 border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur">
+    <header class="border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur">
+      <div class="flex items-center gap-3">
       <h1 class="m-0 text-base font-semibold tracking-tight">TextGerbil</h1>
       <div class="tabs flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1" id="tabs"></div>
-      <div class="toolbar ml-auto flex items-center gap-2">
-        <button id="addTab" class="btn small" aria-label="New tab">
+        <button id="addTab" class="btn small" aria-label="New tab" title="New">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          <span>New</span>
         </button>
-        <select id="modeSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Mode" aria-label="Select editor mode">
-          <option value="text">Text</option>
-          <option value="rich">Rich Text</option>
-          <option value="notepad">Notepad</option>
-        </select>
-        <select id="languageSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Language" aria-label="Select language for syntax highlighting" style="display:none;">
-          <option value="plain">Plain</option>
-          <option value="javascript">JavaScript</option>
-          <option value="python">Python</option>
-          <option value="markdown">Markdown</option>
-          <option value="htmlmixed">HTML</option>
-          <option value="css">CSS</option>
-          <option value="json">JSON</option>
-          <option value="sql">SQL</option>
-        </select>
-        <button id="togglePreview" class="small" aria-label="Toggle preview">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span>Preview</span>
-        </button>
-        <button id="exportBtn" class="small" aria-label="Export file">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-          <span>Export</span>
-        </button>
-        <button id="importBtn" class="small" aria-label="Import file">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21V9"/><path d="m17 14-5-5-5 5"/><path d="M5 3h14"/></svg>
-          <span>Import</span>
-        </button>
-        <input type="file" id="importFile" class="hidden" accept="*/*" aria-hidden="true" />
       </div>
     </header>
 
     <main class="flex flex-1 overflow-hidden p-3">
       <section class="editor-area flex flex-1 flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <div id="tabTitle" class="font-semibold text-slate-800"></div>
-          <div class="ml-auto text-sm text-slate-600">Theme: <button id="themeBtn" class="small"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button></div>
+          <div class="toolbar ml-auto flex flex-wrap items-center gap-2">
+          <select id="modeSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Mode" aria-label="Select editor mode">
+            <option value="text">Text</option>
+            <option value="rich">Rich Text</option>
+            <option value="notepad">Notepad</option>
+          </select>
+          <select id="languageSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Language" aria-label="Select language for syntax highlighting" style="display:none;">
+            <option value="plain">Plain</option>
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="markdown">Markdown</option>
+            <option value="htmlmixed">HTML</option>
+            <option value="css">CSS</option>
+            <option value="json">JSON</option>
+            <option value="sql">SQL</option>
+          </select>
+          <button id="togglePreview" class="small" aria-label="Toggle preview" title="Preview">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button id="exportBtn" class="small" aria-label="Export file" title="Export">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          </button>
+          <button id="importBtn" class="small" aria-label="Import file" title="Import">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21V9"/><path d="m17 14-5-5-5 5"/><path d="M5 3h14"/></svg>
+          </button>
+          </div>
+          <div class="text-sm text-slate-600"><button id="themeBtn" class="small" aria-label="Settings" title="Settings"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+          <input type="file" id="importFile" class="hidden" accept="*/*" aria-hidden="true" />
         </div>
         <div class="editor flex flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div id="textEditor" class="editor-instance active"></div>
@@ -447,6 +446,7 @@
       const els = document.querySelectorAll('.editor-instance');
       els.forEach(e=>e.classList.remove('active'));
       document.getElementById('preview').classList.toggle('hidden', mode==='notepad');
+      syncPreviewToggleState();
       document.getElementById('languageSelect').style.display = mode==='text' ? 'inline-block' : 'none';
       if(mode==='text') {
         document.getElementById('textEditor').classList.add('active');
@@ -492,6 +492,15 @@
       document.getElementById('fgColor').value=theme.fg||'#111111';
     }
 
+    function syncPreviewToggleState(){
+      const preview=document.getElementById('preview');
+      const btn=document.getElementById('togglePreview');
+      if(!preview||!btn) return;
+      const isVisible=!preview.classList.contains('hidden');
+      btn.classList.toggle('is-active', isVisible);
+      btn.setAttribute('aria-pressed', String(isVisible));
+    }
+
     // UI wiring
     document.getElementById('addTab').onclick=()=>{newTab('text')}
     document.getElementById('addNoteBtn').addEventListener('click',()=>{addNote()});
@@ -518,7 +527,10 @@
         updatePreview();
       }
     })
-    document.getElementById('togglePreview').onclick=()=>{document.getElementById('preview').classList.toggle('hidden')}
+    document.getElementById('togglePreview').onclick=()=>{
+      document.getElementById('preview').classList.toggle('hidden');
+      syncPreviewToggleState();
+    }
     document.getElementById('exportBtn').onclick=()=>exportCurrent();
     document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
     document.getElementById('importFile').addEventListener('change',handleImport);
@@ -562,6 +574,7 @@
       tabs.forEach(t=>t.theme=Object.assign({},globalTheme));
       if(tabs.length && tabs.find(x=>x.id===activeId)) applyThemeToEditor(globalTheme);
     }
+    syncPreviewToggleState();
 
     // import/export helpers
     function exportCurrent(){
