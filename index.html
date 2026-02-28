@@ -47,8 +47,9 @@
     .hidden{display:none}
     .settings label{font-size:13px}
     .btn{background:var(--accent);color:#fff;padding:6px 10px;border-radius:8px;border:none;cursor:pointer}
-    .small{padding:6px 10px;font-size:13px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;cursor:pointer}
+    .small{padding:6px 10px;font-size:13px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1}
     .small:hover{background:#f8fafc}
+    .icon{width:14px;height:14px;display:inline-block}
   </style>
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900">
@@ -57,7 +58,10 @@
       <h1 class="m-0 text-base font-semibold tracking-tight">TextGerbil</h1>
       <div class="tabs flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1" id="tabs"></div>
       <div class="toolbar ml-auto flex items-center gap-2">
-        <button id="addTab" class="btn small" aria-label="New tab">+ New</button>
+        <button id="addTab" class="btn small" aria-label="New tab">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New</span>
+        </button>
         <select id="modeSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Mode" aria-label="Select editor mode">
           <option value="text">Text</option>
           <option value="rich">Rich Text</option>
@@ -73,9 +77,18 @@
           <option value="json">JSON</option>
           <option value="sql">SQL</option>
         </select>
-        <button id="togglePreview" class="small" aria-label="Toggle preview">Preview</button>
-        <button id="exportBtn" class="small" aria-label="Export file">Export</button>
-        <button id="importBtn" class="small" aria-label="Import file">Import</button>
+        <button id="togglePreview" class="small" aria-label="Toggle preview">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Preview</span>
+        </button>
+        <button id="exportBtn" class="small" aria-label="Export file">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          <span>Export</span>
+        </button>
+        <button id="importBtn" class="small" aria-label="Import file">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21V9"/><path d="m17 14-5-5-5 5"/><path d="M5 3h14"/></svg>
+          <span>Import</span>
+        </button>
         <input type="file" id="importFile" class="hidden" accept="*/*" aria-hidden="true" />
       </div>
     </header>
@@ -84,13 +97,16 @@
       <section class="editor-area flex flex-1 flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <div class="flex items-center gap-2">
           <div id="tabTitle" class="font-semibold text-slate-800"></div>
-          <div class="ml-auto text-sm text-slate-600">Theme: <button id="themeBtn" class="small">Settings</button></div>
+          <div class="ml-auto text-sm text-slate-600">Theme: <button id="themeBtn" class="small"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button></div>
         </div>
         <div class="editor flex flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div id="textEditor" class="editor-instance active"></div>
           <div id="richEditor" class="editor-instance"></div>
           <div id="notepadEditor" class="editor-instance flex-col gap-2 overflow-auto p-2">
-            <button id="addNoteBtn" class="small btn" style="align-self:flex-start">+ Note</button>
+            <button id="addNoteBtn" class="small btn" style="align-self:flex-start">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Note</span>
+            </button>
             <div id="notesContainer" class="flex flex-col gap-2"></div>
           </div>
         </div>
@@ -99,7 +115,7 @@
           <label class="text-sm text-slate-700">Font size: <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm" id="fontSize" type="number" min="10" max="48" value="14"/></label>
           <label class="text-sm text-slate-700">Background: <input class="mt-1 h-9 w-full rounded-lg border border-slate-300 px-1" id="bgColor" type="color" value="#ffffff"/></label>
           <label class="text-sm text-slate-700">Foreground: <input class="mt-1 h-9 w-full rounded-lg border border-slate-300 px-1" id="fgColor" type="color" value="#111111"/></label>
-          <div style="margin-top:8px"><button id="applyTheme" class="btn small">Apply to current</button> <button id="applyGlobal" class="small">Apply to all</button></div>
+          <div style="margin-top:8px"><button id="applyTheme" class="btn small"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Apply to current</span></button> <button id="applyGlobal" class="small"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg><span>Apply to all</span></button></div>
         </div>
       </section>
 
