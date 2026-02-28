@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TextGerbil — Single File Editor</title>
+  <!-- CodeMirror CSS & JS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+  <!-- Quill Rich Text Editor CSS & JS -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <!-- markdown-it for Markdown preview -->
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it@13/dist/markdown-it.min.js"></script>
+  <style>
+    :root{--gap:10px;--bg:#fafafa;--fg:#111;--accent:#2b8be6}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--fg);background:var(--bg)}
+    .app{display:flex;flex-direction:column;height:100vh}
+    header{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid #e6e6e6}
+    header h1{margin:0;font-size:16px}
+    .tabs{display:flex;align-items:center;gap:6px;overflow:auto;padding:6px}
+    .tab{background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;display:flex;gap:8px;align-items:center;cursor:pointer}
+    .tab.active{border-color:var(--accent);box-shadow:0 0 0 3pxrgba(43,139,230,0.06)}
+    .tab .close{font-weight:700;color:#888;cursor:pointer}
+    .toolbar{margin-left:auto;display:flex;gap:8px;align-items:center}
+    main{flex:1;display:flex;overflow:hidden}
+    .editor-area{flex:1;display:flex;flex-direction:column;padding:12px;gap:8px}
+    .editor{flex:1;display:flex}
+    textarea{flex:1;width:100%;height:100%;resize:none;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;border:1px solid #e1e1e1;border-radius:6px;background:white;color:inherit}
+    .editor-instance{flex:1;width:100%;height:100%;display:none}
+    .editor-instance.active{display:flex}
+    .CodeMirror{flex:1;width:100%;height:100%;font-size:14px}
+    .ql-container{flex:1;width:100%;height:100%;overflow:auto}
+    .ql-editor{min-height:100%;padding:12px}
+    .sidebar{width:360px;border-left:1px solid #eee;padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+    .hidden{display:none}
+    .settings{padding:8px;border-top:1px solid #eee}
+    label{font-size:13px}
+    .btn{background:var(--accent);color:#fff;padding:6px 10px;border-radius:6px;border:none;cursor:pointer}
+    .small{padding:4px 6px;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>TextGerbil</h1>
+      <div class="tabs" id="tabs"></div>
+      <div class="toolbar">
+        <button id="addTab" class="btn small" aria-label="New tab">+ New</button>
+        <select id="modeSelect" title="Mode" aria-label="Select editor mode">
+          <option value="text">Text</option>
+          <option value="rich">Rich Text</option>
+          <option value="notepad">Notepad</option>
+        </select>
+        <select id="languageSelect" title="Language" aria-label="Select language for syntax highlighting" style="display:none;">
+          <option value="plain">Plain</option>
+          <option value="javascript">JavaScript</option>
+          <option value="python">Python</option>
+          <option value="markdown">Markdown</option>
+          <option value="htmlmixed">HTML</option>
+          <option value="css">CSS</option>
+          <option value="json">JSON</option>
+          <option value="sql">SQL</option>
+        </select>
+        <button id="togglePreview" class="small" aria-label="Toggle preview">Preview</button>
+        <button id="exportBtn" class="small" aria-label="Export file">Export</button>
+        <button id="importBtn" class="small" aria-label="Import file">Import</button>
+        <input type="file" id="importFile" class="hidden" accept="*/*" aria-hidden="true" />
+      </div>
+    </header>
+
+    <main>
+      <section class="editor-area">
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="tabTitle" style="font-weight:600"></div>
+          <div style="margin-left:auto">Theme: <button id="themeBtn" class="small">Settings</button></div>
+        </div>
+        <div class="editor">
+          <div id="textEditor" class="editor-instance active"></div>
+          <div id="richEditor" class="editor-instance"></div>
+          <div id="notepadEditor" class="editor-instance" style="flex-direction:column;gap:6px;overflow:auto;padding:6px">
+            <button id="addNoteBtn" class="small btn" style="align-self:flex-start">+ Note</button>
+            <div id="notesContainer" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+        </div>
+        <div class="settings" id="settingsPanel" style="display:none">
+          <label>Font family: <input id="fontFamily" placeholder="e.g. Inter, monospace"/></label>
+          <label>Font size: <input id="fontSize" type="number" min="10" max="48" value="14"/></label>
+          <label>Background: <input id="bgColor" type="color" value="#ffffff"/></label>
+          <label>Foreground: <input id="fgColor" type="color" value="#111111"/></label>
+          <div style="margin-top:8px"><button id="applyTheme" class="btn small">Apply to current</button> <button id="applyGlobal" class="small">Apply to all</button></div>
+        </div>
+      </section>
+
+      <aside class="sidebar hidden" id="preview">
+        <div style="font-weight:700">Preview</div>
+        <div id="previewContent" style="flex:1;overflow:auto;padding-top:6px"></div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'textgerbil_v1_tabs'
+    const STORAGE_GLOBAL = 'textgerbil_v1_global'
+    let tabs = []
+    let activeId = null
+    let globalTheme = null
+    let editors = {} // store editor instances: {tabId: {cm, quill, ...}}
+    let md = null // markdown-it instance
+    // data for notepad: each tab will have notepadData = [{id,text},...]
+    // cursor state: stored per-tab under .cursor
+
+
+    function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+
+    function initMarkdownIt(){
+      if(!md && window.markdownit) md = window.markdownit('commonmark', {html: true, breaks: true})
+      return md
+    }
+
+    function detectLanguageFromTitle(title){
+      if(!title) return 'plain';
+      const ext = title.split('.').pop().toLowerCase();
+      const map = {'js':'javascript','py':'python','md':'markdown','html':'htmlmixed','htm':'htmlmixed','css':'css','json':'json','sql':'sql','ts':'javascript','jsx':'javascript','tsx':'htmlmixed'};
+      return map[ext] || 'plain';
+    }
+
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({tabs,activeId}));
+      if(globalTheme) localStorage.setItem(STORAGE_GLOBAL, JSON.stringify(globalTheme));
+    }
+    function load(){
+      const v=localStorage.getItem(STORAGE_KEY);
+      if(v){
+        try{const s=JSON.parse(v);tabs=s.tabs||[];activeId=s.activeId;}catch(e){/*ignore*/}
+      }
+      const g=localStorage.getItem(STORAGE_GLOBAL);
+      if(g){try{globalTheme=JSON.parse(g);}catch(e){globalTheme=null}}
+      return true;
+    }
+
+    function renameTab(tabId, newTitle){
+      const t=tabs.find(x=>x.id===tabId);
+      if(!t) return;
+      t.title=(newTitle||'').trim()||'Untitled';
+      save();
+      renderTabs();
+      if(activeId===tabId) document.getElementById('tabTitle').textContent=t.title;
+    }
+
+    function enableTabRename(tabEl, tabId){
+      const titleSpan=tabEl.querySelector('span:first-child');
+      if(!titleSpan) return;
+      const oldTitle=titleSpan.textContent;
+      const input=document.createElement('input');
+      input.type='text';
+      input.value=oldTitle;
+      input.style.cssText='padding:4px;border:1px solid var(--accent);border-radius:4px;width:100px;font-size:13px';
+      titleSpan.replaceWith(input);
+      input.focus();
+      input.select();
+      const confirmRename=()=>{
+        const newTitle=input.value;
+        renameTab(tabId, newTitle);
+      };
+      input.onkeypress=(e)=>{if(e.key==='Enter'){confirmRename();e.preventDefault();}};
+      input.onblur=confirmRename;
+    }
+
+    function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');d.className='tab'+(t.id===activeId?' active':'');const titleSpan=document.createElement('span');titleSpan.textContent=t.title||'Untitled';titleSpan.ondblclick=(e)=>{e.stopPropagation();enableTabRename(d,t.id)};d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close';closeSpan.textContent='×';closeSpan.title='Close';
+      closeSpan.onclick=(e)=>{e.stopPropagation();try{closeTab(t.id);}catch(err){console.error('closeTab error',err);}};
+      d.appendChild(closeSpan);d.onclick=(e)=>{if(e.detail===1)selectTab(t.id)};el.appendChild(d)})}
+
+    function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Untitled',mode:'text',language:'plain',content:'',theme:{}});activeId=tabs[0].id}}
+
+    function selectTab(id){
+      const t=tabs.find(x=>x.id===id);
+      if(!t) return;
+      saveCurrentEditor();
+      activeId=id;
+      document.getElementById('tabTitle').textContent=t.title;
+      document.getElementById('modeSelect').value=t.mode;
+      if(t.mode==='text'){
+        if(!t.language) t.language = detectLanguageFromTitle(t.title);
+        document.getElementById('languageSelect').value=t.language;
+      }
+      switchEditorMode(t.mode, id);
+      setEditorContent(t.content||'');
+      applyThemeToEditor(t.theme);
+      renderTabs();
+      updatePreview();
+      // restore cursor after rendering
+      setTimeout(()=>{
+        if(t.cursor){
+          if(t.mode==='text'){
+            const ed=editors[t.id]; if(ed && ed.cm && t.cursor && typeof ed.cm.setCursor==='function') ed.cm.setCursor(t.cursor);
+          } else if(t.mode==='notepad' && t.cursor){
+            const area=document.querySelector(`#notesContainer textarea[data-note-id="${t.cursor.noteId}"]`);
+            if(area){area.focus();area.setSelectionRange(t.cursor.start||0,t.cursor.end||0);}
+          }
+        }
+      },50);
+    }
+
+    function newTab(mode='text'){
+      const t={id:uid(),title:'Untitled',mode,language:'plain',content:'',theme:{}};
+      if(mode==='notepad') t.notepadData=[];
+      if(globalTheme){t.theme=Object.assign({},globalTheme);} // inherit global
+      tabs.push(t);
+      activeId=t.id;
+      renderTabs();
+      selectTab(t.id);
+      save();
+    }
+
+    function closeTab(id){
+      const idx = tabs.findIndex(x => x.id === id);
+      if (idx === -1) return;
+      // destroy any associated editor instance to prevent later errors
+      if (editors[id]) {
+        const ed = editors[id];
+        if (ed.cm && typeof ed.cm.toTextArea === 'function') {
+          try { ed.cm.toTextArea(); } catch (e) { /* ignore */ }
+        }
+        // quill doesn't provide a destroy API; clearing reference
+        delete editors[id];
+      }
+      tabs.splice(idx, 1);
+      if (activeId === id) {
+        // pick next tab to the right, or previous one
+        if (tabs[idx]) activeId = tabs[idx].id;
+        else if (tabs[idx - 1]) activeId = tabs[idx - 1].id;
+        else activeId = null;
+      }
+      ensureAtLeastOne();
+      save();
+      renderTabs();
+      if (activeId) selectTab(activeId);
+    }
+
+    function saveCurrentEditor(){
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t) return;
+      t.content = getEditorContent();
+      // save cursor/selection
+      if(t.mode==='text'){
+        const ed=editors[t.id]; if(ed && ed.cm && typeof ed.cm.getCursor==='function'){t.cursor=ed.cm.getCursor();}
+      } else if(t.mode==='notepad'){
+        // store index and cursor position inside note
+        const focused = document.querySelector('#notesContainer textarea:focus');
+        if(focused){t.cursor={noteId:focused.dataset.noteId,start:focused.selectionStart,end:focused.selectionEnd};}
+      }
+      t.mode = document.getElementById('modeSelect').value;
+      if(t.mode==='text') t.language = document.getElementById('languageSelect').value;
+      save();
+    }
+
+    function updatePreview(){
+      const t=tabs.find(x=>x.id===activeId);
+      const pv=document.getElementById('previewContent');
+      if(!t||!pv) return;
+      pv.innerHTML='';
+      if(t.mode==='text'){
+        if(t.language==='markdown'){
+          initMarkdownIt();
+          if(md){pv.innerHTML=md.render(t.content||'')}else{pv.textContent=t.content}
+        } else if(t.language==='htmlmixed'){
+          const iframe=document.createElement('iframe');
+          iframe.style.width='100%';
+          iframe.style.height='80vh';
+          iframe.srcdoc=t.content||'';
+          pv.appendChild(iframe);
+        } else {
+          pv.textContent=t.content
+        }
+      } else {
+        pv.textContent=t.content
+      }
+    }
+
+    // notepad helpers
+    function renderNotepad(){
+      const t=tabs.find(x=>x.id===activeId);
+      const container=document.getElementById('notesContainer');
+      container.innerHTML='';
+      if(!t.notepadData) t.notepadData=[];
+      t.notepadData.forEach(note=>{
+        const wrapper=document.createElement('div');
+        wrapper.style.display='flex';
+        wrapper.style.alignItems='center';
+        wrapper.style.gap='4px';
+        const ta=document.createElement('textarea');
+        ta.style.flex='1';
+        ta.dataset.noteId=note.id;
+        ta.value=note.text;
+        ta.addEventListener('input',()=>{note.text=ta.value;save();});
+        const del=document.createElement('button');
+        del.textContent='×';
+        del.title='Delete note';
+        del.className='small';
+        del.onclick=()=>{removeNote(note.id)};
+        wrapper.appendChild(ta);
+        wrapper.appendChild(del);
+        container.appendChild(wrapper);
+      });
+    }
+    function addNote(){
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t.notepadData) t.notepadData=[];
+      const id=uid();
+      t.notepadData.push({id,text:''});
+      save();
+      renderNotepad();
+    }
+    function removeNote(id){
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t.notepadData) return;
+      t.notepadData=t.notepadData.filter(n=>n.id!==id);
+      save();
+      renderNotepad();
+    }
+
+    function getEditorContent(){
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t) return '';
+      const ed = editors[t.id] || {};
+      if(t.mode==='text' && ed.cm) return ed.cm.getValue();
+      if(t.mode==='rich' && ed.quill) return ed.quill.root.innerHTML;
+      if(t.mode==='notepad') {
+        // convert notes array to JSON
+        return JSON.stringify(t.notepadData||[]);
+      }
+      return '';
+    }
+
+    function setEditorContent(content){
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t) return;
+      const ed = editors[t.id] = editors[t.id] || {};
+      if(t.mode==='text'){
+        if(!ed.cm) initCodeMirror(t.id);
+        if(ed.cm) ed.cm.setValue(content||'');
+      }
+      if(t.mode==='rich'){
+        if(!ed.quill) initQuill(t.id);
+        if(ed.quill) ed.quill.root.innerHTML=content||'';
+      }
+      if(t.mode==='notepad'){
+        try{t.notepadData = JSON.parse(content||'[]');}catch(e){t.notepadData=[];}
+        renderNotepad();
+      }
+    }
+
+    function initCodeMirror(tabId){
+      const ed = editors[tabId] = editors[tabId] || {};
+      if(ed.cm && typeof ed.cm.toTextArea === 'function') ed.cm.toTextArea();
+      const t = tabs.find(x=>x.id===tabId);
+      if(!t) return;
+      const lang = t.language || 'plain';
+      const textEditorEl = document.getElementById('textEditor');
+      textEditorEl.innerHTML='';
+      // headless environment (tests) may set a flag to avoid CodeMirror's heavy logic
+      if(window.__TEXTGERBIL_HEADLESS){
+        ed.cm = {
+          getValue:()=>t.content||'',
+          setValue:(v)=>{t.content=v;},
+          on:()=>{},
+          setOption:()=>{},
+          focus:()=>{},
+          toTextArea:()=>{},
+          getWrapperElement:()=>({style:{}}),
+          getCursor:()=>({line:0,ch:0}),
+          setCursor:()=>{}
+        };
+        return;
+      }
+      ed.cm = CodeMirror(textEditorEl, {
+        value: t.content||'',
+        mode: lang,
+        theme: 'monokai',
+        lineNumbers: true,
+        tabSize: 2,
+        indentUnit: 2
+      });
+      // guard against environments (like JSDOM) where getBoundingClientRect may be missing
+      if (ed.cm && ed.cm.display && ed.cm.display.wrapper) {
+        const wrap = ed.cm.display.wrapper;
+        if (typeof wrap.getBoundingClientRect !== 'function') {
+          wrap.getBoundingClientRect = () => ({left:0,top:0,right:0,bottom:0,width:0,height:0});
+        }
+      }
+      ed.cm.on('change', ()=>{
+        const tab=tabs.find(x=>x.id===tabId);
+        if(tab) {tab.content=ed.cm.getValue(); save(); updatePreview()}
+      });
+    }
+
+    function initQuill(tabId){
+      const ed = editors[tabId] = editors[tabId] || {};
+      const t = tabs.find(x=>x.id===tabId);
+      const richEditorEl = document.getElementById('richEditor');
+      richEditorEl.innerHTML='<div id="quill-root"></div>';
+      if(window.__TEXTGERBIL_HEADLESS){
+        // simple stub with minimal interface
+        ed.quill = {root:{innerHTML: t.content||''}, on:()=>{}};
+        return;
+      }
+      ed.quill = new Quill('#quill-root', {
+        theme: 'snow',
+        placeholder: 'Start typing...',
+        modules: {toolbar: [[{header:[1,2,false]}], ['bold','italic','underline'], ['link','blockquote','code-block'], [{list:'ordered'},{list:'bullet'}]]}
+      });
+      if(t && t.content) ed.quill.root.innerHTML=t.content;
+      ed.quill.on('text-change', ()=>{
+        if(t) {t.content=ed.quill.root.innerHTML; save(); updatePreview()}
+      });
+    }
+
+    function switchEditorMode(mode, tabId){
+      const els = document.querySelectorAll('.editor-instance');
+      els.forEach(e=>e.classList.remove('active'));
+      document.getElementById('preview').classList.toggle('hidden', mode==='notepad');
+      document.getElementById('languageSelect').style.display = mode==='text' ? 'inline-block' : 'none';
+      if(mode==='text') {
+        document.getElementById('textEditor').classList.add('active');
+        initCodeMirror(tabId);
+      } else if(mode==='rich') {
+        document.getElementById('richEditor').classList.add('active');
+      } else if(mode==='notepad') {
+        document.getElementById('notepadEditor').classList.add('active');
+      }
+    }
+
+    function applyThemeToEditor(theme){
+      if(!theme) return;
+      // determine which element is currently visible for styling
+      const t = tabs.find(x=>x.id===activeId);
+      if(!t) return;
+      let target = null;
+      if(t.mode==='text') {
+        const ed = editors[t.id];
+        if(ed && ed.cm && typeof ed.cm.getWrapperElement==='function') target = ed.cm.getWrapperElement();
+        else target = document.getElementById('textEditor');
+      } else if(t.mode==='rich') {
+        const ed = editors[t.id];
+        if(ed && ed.quill) target = ed.quill.root;
+      } else if(t.mode==='notepad') {
+        // notepad theme applies to notes container
+        target = document.getElementById('notesContainer');
+      }
+      if(!target) return;
+      if(theme.fontFamily) target.style.fontFamily=theme.fontFamily;
+      if(theme.fontSize) target.style.fontSize=theme.fontSize+'px';
+      if(theme.bg) target.style.background=theme.bg;
+      if(theme.fg) target.style.color=theme.fg;
+    }
+
+    // helpers
+    function populateThemeInputs(){
+      const t=tabs.find(x=>x.id===activeId);
+      const theme = t && t.theme ? t.theme : globalTheme || {};
+      document.getElementById('fontFamily').value=theme.fontFamily||'';
+      document.getElementById('fontSize').value=theme.fontSize||14;
+      document.getElementById('bgColor').value=theme.bg||'#ffffff';
+      document.getElementById('fgColor').value=theme.fg||'#111111';
+    }
+
+    // UI wiring
+    document.getElementById('addTab').onclick=()=>{newTab('text')}
+    document.getElementById('addNoteBtn').addEventListener('click',()=>{addNote()});
+    document.getElementById('modeSelect').addEventListener('change',e=>{
+      const t=tabs.find(x=>x.id===activeId);
+      if(t){
+        saveCurrentEditor();
+        t.mode=e.target.value;
+        if(t.mode==='text' && !t.language) t.language='plain';
+        switchEditorMode(t.mode, t.id);
+        setEditorContent(t.content);
+        save();
+        updatePreview();
+      }
+    })
+    document.getElementById('languageSelect').addEventListener('change',e=>{
+      const t=tabs.find(x=>x.id===activeId);
+      if(t && t.mode==='text'){
+        t.language=e.target.value;
+        if(editors[t.id] && editors[t.id].cm){
+          editors[t.id].cm.setOption('mode', t.language);
+        }
+        save();
+        updatePreview();
+      }
+    })
+    document.getElementById('togglePreview').onclick=()=>{document.getElementById('preview').classList.toggle('hidden')}
+    document.getElementById('exportBtn').onclick=()=>exportCurrent();
+    document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
+    document.getElementById('importFile').addEventListener('change',handleImport);
+    document.getElementById('themeBtn').onclick=()=>{
+      const p=document.getElementById('settingsPanel');
+      if(p.style.display==='none') populateThemeInputs();
+      p.style.display=p.style.display==='none'?'block':'none';
+    }
+    document.getElementById('applyTheme').onclick=()=>{
+      const t=tabs.find(x=>x.id===activeId);if(!t) return;
+      t.theme={fontFamily:document.getElementById('fontFamily').value,fontSize:document.getElementById('fontSize').value,bg:document.getElementById('bgColor').value,fg:document.getElementById('fgColor').value};
+      applyThemeToEditor(t.theme);save();
+    }
+    document.getElementById('applyGlobal').onclick=()=>{
+      const theme={fontFamily:document.getElementById('fontFamily').value,fontSize:document.getElementById('fontSize').value,bg:document.getElementById('bgColor').value,fg:document.getElementById('fgColor').value};
+      tabs.forEach(t=>t.theme=Object.assign({},theme));
+      globalTheme=Object.assign({},theme);
+      applyThemeToEditor(tabs.find(x=>x.id===activeId).theme);
+      save();
+    }
+
+    // Initialization
+    if(!load()){tabs=[];ensureAtLeastOne()}
+    initMarkdownIt();
+    renderTabs();
+    selectTab(activeId);
+    // restore cursor if present after selection
+    const t=tabs.find(x=>x.id===activeId);
+    if(t && t.cursor){
+      setTimeout(()=>{
+        if(t.mode==='text'){
+          const ed=editors[t.id]; if(ed && ed.cm && t.cursor) ed.cm.setCursor(t.cursor);
+        } else if(t.mode==='notepad' && t.cursor){
+          const area=document.querySelector(`#notesContainer textarea[data-note-id="${t.cursor.noteId}"]`);
+          if(area){area.focus();area.setSelectionRange(t.cursor.start||0,t.cursor.end||0);}
+        }
+      },100);
+    }
+    // apply global theme after load
+    if(globalTheme){
+      tabs.forEach(t=>t.theme=Object.assign({},globalTheme));
+      if(tabs.length && tabs.find(x=>x.id===activeId)) applyThemeToEditor(globalTheme);
+    }
+
+    // import/export helpers
+    function exportCurrent(){
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t) return;
+      const blob=new Blob([t.content||''],{type:'text/plain'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=(t.title||'untitled')+'.txt';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function handleImport(e){
+      const file=e.target.files[0];
+      if(!file) return;
+      const reader=new FileReader();
+      reader.onload=()=>{
+        const text=reader.result;
+        // open in new tab
+        const newId=uid();
+        const t={id:newId,title:file.name,mode:'plain',content:text,theme:{}};
+        if(globalTheme) t.theme=Object.assign({},globalTheme);
+        tabs.push(t);
+        activeId=newId;
+        renderTabs();
+        selectTab(activeId);
+        save();
+      };
+      reader.readAsText(file);
+      e.target.value='';
+    }
+    // keyboard shortcuts
+    document.addEventListener('keydown',ev=>{
+      const cmd = ev.metaKey||ev.ctrlKey;
+      if(!cmd) return;
+      switch(ev.key.toLowerCase()){
+        case 's': ev.preventDefault(); exportCurrent(); break;
+        case 'o': ev.preventDefault(); document.getElementById('importBtn').click(); break;
+        case 't': ev.preventDefault(); newTab(document.getElementById('modeSelect').value); break;
+        case 'w': ev.preventDefault(); closeTab(activeId); break;
+      }
+    });
+
+    // expose for debugging
+    window.__textgerbil = {tabs,save,load,newTab,closeTab,editors,initCodeMirror,initQuill,exportCurrent,detectLanguageFromTitle,renderTabs}
+  </script>
+</body>
+</html>

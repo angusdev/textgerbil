@@ -1,0 +1,20 @@
+{
+  "name": "textgerbil",
+  "version": "1.0.0",
+  "description": "Single-file browser text editor with multi-tab modes and headless tests.",
+  "main": "index.html",
+  "scripts": {
+    "test": "node test/run_headless_test.js"
+  },
+  "dependencies": {
+    "jsdom": "^28.1.0"
+  },
+  "keywords": [
+    "text-editor",
+    "codemirror",
+    "markdown",
+    "quill",
+    "vanilla-js"
+  ],
+  "license": "MIT"
+}
