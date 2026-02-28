@@ -156,12 +156,20 @@ const { JSDOM } = require('jsdom');
         assert(true, 'Tab switched without error');
       }
 
-      // Test 18: Toggle preview sidebar
+      // Test 18: Preview defaults off and is remembered per tab
       const previewSidebar = doc.getElementById('preview');
-      const initialHidden = previewSidebar.classList.contains('hidden');
-      doc.getElementById('togglePreview').click();
-      const afterClick = previewSidebar.classList.contains('hidden');
-      assert(initialHidden !== afterClick || initialHidden === afterClick, 'Preview toggle works');
+      w.__textgerbil.newTab('text');
+      const firstPreviewTab = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
+      assert(firstPreviewTab.previewVisible === false, 'First tab stores preview hidden by default');
+      assert(previewSidebar.classList.contains('hidden'), 'Preview is hidden by default');
+      firstPreviewTab.previewVisible = true;
+      w.__textgerbil.save();
+
+      w.__textgerbil.newTab('text');
+      const secondPreviewTab = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
+      assert(previewSidebar.classList.contains('hidden'), 'Second tab keeps preview hidden by default');
+      assert(secondPreviewTab.previewVisible === false, 'Second tab stores preview as hidden');
+      assert(firstPreviewTab.previewVisible === true, 'First tab remembers preview visibility');
 
       // Test 19: Export function
       assert(typeof w.__textgerbil.exportCurrent === 'function', 'Export function exposed');
