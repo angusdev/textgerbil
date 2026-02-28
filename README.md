@@ -16,7 +16,7 @@ in the browser. A live demo is available at https://<your-user>.github.io/textge
   - Rich Text (Quill editor)
   - Notepad (multiple short notes in one tab)
 - Themes (font family, size, background/foreground) per-tab or globally
-- Live preview for Markdown and HTML text tabs, plus JSON when the JSON formatter library is available (preview button is disabled otherwise)
+- Live preview for Markdown and HTML text tabs in a strict sandboxed iframe, plus JSON when the JSON formatter library is available (preview button is disabled otherwise)
 - Import and export files
 - Keyboard shortcuts (desktop style)
 - State persistence: tabs, contents, preview visibility, cursor/selection, themes
@@ -53,6 +53,13 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
 | Ctrl/Cmd + O       | Import file (new tab)      |
 | Ctrl/Cmd + T       | New tab                    |
 | Ctrl/Cmd + W       | Close current tab          |
+
+## Security
+
+- HTML and Markdown previews run in a sandboxed `iframe` with no `allow-*` permissions.
+- The preview document uses a strict `Content-Security-Policy` (`default-src 'none'`) to block scripts, network access, and active content by default.
+- Markdown preview uses `markdown-it` with raw HTML disabled (`html: false`), so raw HTML is escaped instead of executed.
+- If the browser does not support required secure iframe features (`sandbox` + `srcdoc`), HTML/Markdown preview is disabled and the UI shows a clear explanation (`Secure preview unavailable`).
 
 ## Development / Testing
 

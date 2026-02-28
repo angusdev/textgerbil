@@ -82,16 +82,28 @@ Global configuration includes:
 
 - **text**: CodeMirror-based text editor. Syntax behavior is selected by the
   `language` field.
-  - `markdown`: preview rendered with `markdown-it`.
-  - `htmlmixed`: preview rendered in an iframe.
+  - `markdown`: preview rendered with `markdown-it` (`html: false`) and displayed in a sandboxed iframe.
+  - `htmlmixed`: preview rendered in a sandboxed iframe.
   - `json`: preview rendered as a tree view via `json-formatter-js` when available.
   - other languages: preview unavailable.
 - **rich**: Quill editor with toolbar.
 - **notepad**: custom notes list, each note an independent textarea.
 
 Mode switching shows/hides the appropriate `.editor-instance` div. The preview
-toggle is enabled for `text` mode with `markdown` or `htmlmixed`, and for
-`json` only when `window.JSONFormatter` is available.
+toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure
+iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` +
+`iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available.
+
+### Preview Security Model
+
+- HTML and Markdown previews are rendered only in `iframe srcdoc` with:
+  - `sandbox=""` (no `allow-*` permissions)
+  - `referrerPolicy="no-referrer"`
+  - strict inline CSP (`default-src 'none'`, no script execution, no network)
+- Raw Markdown HTML is disabled (`markdown-it` with `html: false`) to prevent
+  untrusted raw HTML from being interpreted as active content.
+- If required secure iframe capabilities are unavailable, HTML/Markdown preview
+  is blocked and the preview panel renders a human-readable error message.
 
 ## Themes
 

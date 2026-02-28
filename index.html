@@ -138,6 +138,8 @@
     let globalTheme = null
     let editors = {} // store editor instances: {tabId: {cm, quill, ...}}
     let md = null // markdown-it instance
+    let previewSupportOverride = null
+    const SECURE_PREVIEW_UNAVAILABLE_MESSAGE = 'This browser does not support the required iframe security features (sandbox + srcdoc). HTML/Markdown preview is disabled to protect your data.'
     // data for notepad: each tab will have notepadData = [{id,text},...]
     // cursor state: stored per-tab under .cursor
 
@@ -145,8 +147,50 @@
     function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 
     function initMarkdownIt(){
-      if(!md && window.markdownit) md = window.markdownit('commonmark', {html: true, breaks: true})
+      if(!md && window.markdownit) md = window.markdownit('commonmark', {html: false, breaks: true})
       return md
+    }
+
+    function getPreviewSupport(){
+      if(previewSupportOverride) return previewSupportOverride
+      const supportsIframe = typeof HTMLIFrameElement !== 'undefined'
+      const iframe = document.createElement('iframe')
+      const supportsSrcdoc = 'srcdoc' in iframe
+      const supportsSandbox = 'sandbox' in iframe
+      return {supportsIframe, supportsSrcdoc, supportsSandbox}
+    }
+
+    function canUseSecureIframePreview(){
+      const support = getPreviewSupport()
+      return support.supportsIframe && support.supportsSrcdoc && support.supportsSandbox
+    }
+
+    function renderPreviewError(message, details){
+      const pv=document.getElementById('previewContent');
+      if(!pv) return;
+      pv.textContent='';
+      const box=document.createElement('div');
+      box.className='rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900';
+      const title=document.createElement('div');
+      title.className='mb-1 font-semibold';
+      title.textContent=message;
+      box.appendChild(title);
+      const body=document.createElement('div');
+      body.className='text-sm';
+      body.textContent=details;
+      box.appendChild(body);
+      pv.appendChild(box);
+    }
+
+    function buildSandboxedPreviewIframe(htmlBody){
+      const iframe=document.createElement('iframe');
+      iframe.style.width='100%';
+      iframe.style.height='80vh';
+      iframe.style.border='0';
+      iframe.setAttribute('sandbox','');
+      iframe.referrerPolicy='no-referrer';
+      iframe.srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; font-src data:; connect-src \'none\'; media-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'; frame-ancestors \'none\'"><style>html,body{margin:0;padding:10px;color:#0f172a;background:#fff;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;line-height:1.5}pre{white-space:pre-wrap;word-break:break-word}</style></head><body>'+htmlBody+'</body></html>';
+      return iframe;
     }
 
     function detectLanguageFromTitle(title){
@@ -341,13 +385,20 @@
       if(t.mode==='text'){
         if(t.language==='markdown'){
           initMarkdownIt();
-          if(md){pv.innerHTML=md.render(t.content||'')}else{pv.textContent=t.content}
+          if(md){
+            if(!canUseSecureIframePreview()){
+              renderPreviewError('Secure preview unavailable', SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
+            } else {
+              const html=md.render(t.content||'');
+              pv.appendChild(buildSandboxedPreviewIframe(html));
+            }
+          }else{pv.textContent=t.content}
         } else if(t.language==='htmlmixed'){
-          const iframe=document.createElement('iframe');
-          iframe.style.width='100%';
-          iframe.style.height='80vh';
-          iframe.srcdoc=t.content||'';
-          pv.appendChild(iframe);
+          if(!canUseSecureIframePreview()){
+            renderPreviewError('Secure preview unavailable', SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
+          } else {
+            pv.appendChild(buildSandboxedPreviewIframe(t.content||''));
+          }
         } else if(t.language==='json'){
           const raw=t.content||'';
           try{
@@ -537,7 +588,7 @@
 
     function canTabPreview(tab){
       if(!tab || tab.mode!=='text') return false;
-      if(tab.language==='markdown' || tab.language==='htmlmixed') return true;
+      if(tab.language==='markdown' || tab.language==='htmlmixed') return canUseSecureIframePreview();
       if(tab.language==='json') return !!window.JSONFormatter;
       return false;
     }
@@ -600,8 +651,16 @@
       const t=tabs.find(x=>x.id===activeId);
       const canPreview=canTabPreview(t);
       btn.disabled=!canPreview;
+      const isHtmlOrMarkdown=!!(t && t.mode==='text' && (t.language==='markdown' || t.language==='htmlmixed'));
       const jsonReady=!!window.JSONFormatter;
-      btn.title=canPreview?'Toggle preview':(jsonReady?'Preview available only for Markdown/HTML/JSON':'Preview available only for Markdown/HTML (JSON formatter unavailable)');
+      const secureReady=canUseSecureIframePreview();
+      if(canPreview){
+        btn.title='Toggle preview';
+      } else if(isHtmlOrMarkdown && !secureReady){
+        btn.title='Preview disabled: browser lacks secure iframe support (sandbox + srcdoc)';
+      } else {
+        btn.title=jsonReady?'Preview available only for Markdown/HTML/JSON':'Preview available only for Markdown/HTML (JSON formatter unavailable)';
+      }
       const isVisible=!preview.classList.contains('hidden');
       btn.classList.toggle('is-active', isVisible);
       btn.setAttribute('aria-pressed', String(isVisible));
@@ -728,7 +787,26 @@
     });
 
     // expose for debugging
-    window.__textgerbil = {tabs,save,load,newTab,closeTab,selectTab,editors,initCodeMirror,initQuill,exportCurrent,detectLanguageFromTitle,renderTabs}
+    window.__textgerbil = {
+      tabs,
+      save,
+      load,
+      newTab,
+      closeTab,
+      selectTab,
+      editors,
+      initCodeMirror,
+      initQuill,
+      exportCurrent,
+      detectLanguageFromTitle,
+      renderTabs,
+      updatePreview,
+      syncPreviewToggleState,
+      getPreviewSupport,
+      canUseSecureIframePreview,
+      setPreviewSupportOverride:(override)=>{previewSupportOverride=override||null; syncPreviewToggleState(); updatePreview();},
+      setMarkdownRendererForTest:(renderer)=>{md=renderer||null; updatePreview();}
+    }
   </script>
 </body>
 </html>

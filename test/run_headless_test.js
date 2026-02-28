@@ -590,13 +590,24 @@ const { JSDOM } = require('jsdom');
         'Tab switch focuses text editor area'
       );
 
-      // Test 40: Preview enabled only for markdown/html/json
+      // Test 40: Preview security behavior and availability by language
       const previewToggle = doc.getElementById('togglePreview');
       const previewPanel = doc.getElementById('preview');
+      const previewContent = doc.getElementById('previewContent');
       const previewTabId = focusSourceId;
       w.__textgerbil.selectTab(previewTabId);
       doc.getElementById('modeSelect').value = 'text';
       doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: true, supportsSandbox: true });
+      w.__textgerbil.setMarkdownRendererForTest({
+        render(input) {
+          const safe = String(input || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+          return `<p>${safe}</p>`;
+        }
+      });
 
       doc.getElementById('languageSelect').value = 'python';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
@@ -608,13 +619,47 @@ const { JSDOM } = require('jsdom');
 
       doc.getElementById('languageSelect').value = 'markdown';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      previewTab.content = '<script>alert(1)</script><img src=x onerror=alert(1)>';
+      w.__textgerbil.updatePreview();
       previewToggle.click();
       assert(previewTab.previewVisible === true, 'Preview toggle works for markdown');
       assert(!previewPanel.classList.contains('hidden'), 'Preview shows for markdown');
+      let markdownIframe = previewContent.querySelector('iframe');
+      assert(!!markdownIframe, 'Markdown preview renders inside iframe');
+      assert(markdownIframe.getAttribute('sandbox') !== null, 'Markdown preview iframe has sandbox attribute');
+      assert((markdownIframe.getAttribute('sandbox') || '') === '', 'Markdown preview iframe uses strict empty sandbox');
+      const markdownSrcdoc = markdownIframe.getAttribute('srcdoc') || '';
+      assert(markdownSrcdoc.includes("default-src 'none'"), 'Markdown iframe srcdoc includes strict CSP');
+      assert(markdownSrcdoc.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), 'Markdown raw HTML is escaped in preview output');
+      assert(!markdownSrcdoc.includes('<script>alert(1)</script>'), 'Markdown raw script tag is not active in preview output');
 
       doc.getElementById('languageSelect').value = 'htmlmixed';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
       assert(!previewPanel.classList.contains('hidden'), 'Preview remains available for HTML');
+      previewTab.content = '<h1>safe</h1>';
+      w.__textgerbil.updatePreview();
+      const htmlIframe = previewContent.querySelector('iframe');
+      assert(!!htmlIframe, 'HTML preview renders inside iframe');
+      assert(htmlIframe.getAttribute('sandbox') !== null, 'HTML preview iframe has sandbox attribute');
+      assert((htmlIframe.getAttribute('sandbox') || '') === '', 'HTML preview iframe uses strict empty sandbox');
+      assert((htmlIframe.getAttribute('srcdoc') || '').includes("default-src 'none'"), 'HTML iframe srcdoc includes strict CSP');
+
+      w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: false, supportsSandbox: true });
+      doc.getElementById('languageSelect').value = 'markdown';
+      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      assert(previewToggle.disabled === true, 'Preview toggle disabled when secure iframe support is missing');
+      assert(
+        previewToggle.title.includes('browser lacks secure iframe support (sandbox + srcdoc)'),
+        'Preview toggle explains missing secure iframe support'
+      );
+      previewTab.previewVisible = true;
+      w.__textgerbil.updatePreview();
+      assert(
+        /Secure preview unavailable/.test(previewContent.textContent || ''),
+        'Unsupported browser path shows secure preview unavailable message'
+      );
+      w.__textgerbil.setPreviewSupportOverride(null);
+      w.__textgerbil.updatePreview();
 
       doc.getElementById('languageSelect').value = 'json';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
@@ -628,7 +673,6 @@ const { JSDOM } = require('jsdom');
       previewToggle.click();
       if (hasFormatter) {
         assert(previewTab.previewVisible === true, 'Preview toggle works for JSON when formatter is available');
-        const previewContent = doc.getElementById('previewContent');
         assert(!!previewContent.querySelector('.json-formatter-row') || /Object/.test(previewContent.textContent || ''), 'JSON preview renders tree view');
       } else {
         assert(previewTab.previewVisible === false, 'Preview toggle ignored for JSON when formatter is unavailable');
