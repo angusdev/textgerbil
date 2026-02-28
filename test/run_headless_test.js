@@ -566,6 +566,30 @@ const { JSDOM } = require('jsdom');
         }
       );
 
+      // Test 39: Switch tab restores text cursor and focuses editor
+      w.__textgerbil.newTab('text');
+      const focusSourceId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(focusSourceId);
+      const focusSourceEd = w.__textgerbil.editors[focusSourceId] && w.__textgerbil.editors[focusSourceId].cm;
+      if (focusSourceEd) {
+        focusSourceEd.setValue('cursor restore on switch');
+        focusSourceEd.setCursor({ line: 2, ch: 5 });
+      }
+      w.__textgerbil.newTab('text');
+      const focusTargetId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(focusTargetId);
+      w.__textgerbil.selectTab(focusSourceId);
+      await new Promise(resolve => setTimeout(resolve, 90));
+      const restoredEd = w.__textgerbil.editors[focusSourceId] && w.__textgerbil.editors[focusSourceId].cm;
+      const restoredCursor = restoredEd && restoredEd.getCursor ? restoredEd.getCursor() : null;
+      assert(restoredCursor && restoredCursor.line === 2 && restoredCursor.ch === 5, 'Tab switch restores previous text cursor position');
+      assert(
+        w.__TEXTGERBIL_HEADLESS_LAST_FOCUS &&
+          w.__TEXTGERBIL_HEADLESS_LAST_FOCUS.tabId === focusSourceId &&
+          w.__TEXTGERBIL_HEADLESS_LAST_FOCUS.mode === 'text',
+        'Tab switch focuses text editor area'
+      );
+
     } catch (e) {
       console.error('test error', e);
       testsFailed++;

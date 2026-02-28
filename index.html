@@ -233,20 +233,49 @@
       renderTabs();
       updatePreview();
       save();
-      // restore cursor after rendering
-      setTimeout(()=>{
-        if(t.cursor){
-          if(t.mode==='text'){
-            const ed=editors[t.id]; if(ed && ed.cm && t.cursor && typeof ed.cm.setCursor==='function') ed.cm.setCursor(t.cursor);
-          } else if(t.mode==='notepad' && t.cursor){
-            const area=document.querySelector(`#notesContainer textarea[data-note-id="${t.cursor.noteId}"]`);
-            if(area){area.focus();area.setSelectionRange(t.cursor.start||0,t.cursor.end||0);}
+      // restore cursor and focus editor after rendering
+      setTimeout(()=>restoreCursorAndFocus(t),50);
+    }
+
+    function restoreCursorAndFocus(tab){
+      if(!tab) return;
+      if(tab.mode==='text'){
+        const ed=editors[tab.id];
+        if(ed && ed.cm){
+          if(tab.cursor && typeof ed.cm.setCursor==='function') ed.cm.setCursor(tab.cursor);
+          if(typeof ed.cm.focus==='function') ed.cm.focus();
+        }
+        return;
+      }
+      if(tab.mode==='rich'){
+        const ed=editors[tab.id];
+        if(ed && ed.quill){
+          if(typeof ed.quill.focus==='function') ed.quill.focus();
+          else if(ed.quill.root && typeof ed.quill.root.focus==='function') ed.quill.root.focus();
+        }
+        return;
+      }
+      if(tab.mode==='notepad'){
+        let area=null;
+        if(tab.cursor){
+          area=document.querySelector(`#notesContainer textarea[data-note-id="${tab.cursor.noteId}"]`);
+          if(area){
+            area.focus();
+            area.setSelectionRange(tab.cursor.start||0,tab.cursor.end||0);
+            return;
           }
         }
-      },50);
+        area=document.querySelector('#notesContainer textarea');
+        if(area){
+          area.focus();
+          const end=area.value.length;
+          area.setSelectionRange(end,end);
+        }
+      }
     }
 
     function newTab(mode='text'){
+      saveCurrentEditor();
       const t={id:uid(),title:'Untitled',mode,language:'plain',content:'',theme:{},previewVisible:false};
       if(mode==='notepad') t.notepadData=[];
       if(globalTheme){t.theme=Object.assign({},globalTheme);} // inherit global
@@ -413,7 +442,7 @@
           setValue:(v)=>{t.content=v;},
           on:()=>{},
           setOption:()=>{},
-          focus:()=>{},
+          focus:()=>{window.__TEXTGERBIL_HEADLESS_LAST_FOCUS={tabId,mode:'text'};},
           toTextArea:()=>{},
           getWrapperElement:()=>({style:{}}),
           getCursor:()=>({line:headlessCursor.line,ch:headlessCursor.ch}),
@@ -453,7 +482,11 @@
       richEditorEl.innerHTML='<div id="quill-root"></div>';
       if(window.__TEXTGERBIL_HEADLESS){
         // simple stub with minimal interface
-        ed.quill = {root:{innerHTML: t.content||''}, on:()=>{}};
+        ed.quill = {
+          root:{innerHTML: t.content||''},
+          on:()=>{},
+          focus:()=>{window.__TEXTGERBIL_HEADLESS_LAST_FOCUS={tabId,mode:'rich'};}
+        };
         return;
       }
       ed.quill = new Quill('#quill-root', {
@@ -605,18 +638,6 @@
     initMarkdownIt();
     renderTabs();
     selectTab(activeId);
-    // restore cursor if present after selection
-    const t=tabs.find(x=>x.id===activeId);
-    if(t && t.cursor){
-      setTimeout(()=>{
-        if(t.mode==='text'){
-          const ed=editors[t.id]; if(ed && ed.cm && t.cursor) ed.cm.setCursor(t.cursor);
-        } else if(t.mode==='notepad' && t.cursor){
-          const area=document.querySelector(`#notesContainer textarea[data-note-id="${t.cursor.noteId}"]`);
-          if(area){area.focus();area.setSelectionRange(t.cursor.start||0,t.cursor.end||0);}
-        }
-      },100);
-    }
     syncPreviewToggleState();
 
     // import/export helpers
