@@ -590,7 +590,7 @@ const { JSDOM } = require('jsdom');
         'Tab switch focuses text editor area'
       );
 
-      // Test 40: Preview enabled only for markdown/html
+      // Test 40: Preview enabled only for markdown/html/json
       const previewToggle = doc.getElementById('togglePreview');
       const previewPanel = doc.getElementById('preview');
       const previewTabId = focusSourceId;
@@ -603,8 +603,8 @@ const { JSDOM } = require('jsdom');
       const previewTab = w.__textgerbil.tabs.find(x => x.id === previewTabId);
       const beforePythonToggle = !!previewTab.previewVisible;
       previewToggle.click();
-      assert(previewTab.previewVisible === beforePythonToggle, 'Preview toggle ignored for non-markdown/html language');
-      assert(previewPanel.classList.contains('hidden'), 'Preview stays hidden for non-markdown/html language');
+      assert(previewTab.previewVisible === beforePythonToggle, 'Preview toggle ignored for non-markdown/html/json language');
+      assert(previewPanel.classList.contains('hidden'), 'Preview stays hidden for non-markdown/html/json language');
 
       doc.getElementById('languageSelect').value = 'markdown';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
@@ -615,6 +615,25 @@ const { JSDOM } = require('jsdom');
       doc.getElementById('languageSelect').value = 'htmlmixed';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
       assert(!previewPanel.classList.contains('hidden'), 'Preview remains available for HTML');
+
+      doc.getElementById('languageSelect').value = 'json';
+      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      const activePreviewTab = w.__textgerbil.tabs.find(x => x.id === previewTabId);
+      if (activePreviewTab) {
+        activePreviewTab.content = '{\"name\":\"textgerbil\",\"items\":[1,2]}';
+        activePreviewTab.previewVisible = false;
+      }
+      w.__textgerbil.selectTab(previewTabId);
+      const hasFormatter = !!w.JSONFormatter;
+      previewToggle.click();
+      if (hasFormatter) {
+        assert(previewTab.previewVisible === true, 'Preview toggle works for JSON when formatter is available');
+        const previewContent = doc.getElementById('previewContent');
+        assert(!!previewContent.querySelector('.json-formatter-row') || /Object/.test(previewContent.textContent || ''), 'JSON preview renders tree view');
+      } else {
+        assert(previewTab.previewVisible === false, 'Preview toggle ignored for JSON when formatter is unavailable');
+        assert(previewToggle.disabled === true, 'Preview button disabled for JSON when formatter is unavailable');
+      }
 
     } catch (e) {
       console.error('test error', e);

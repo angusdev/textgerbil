@@ -16,7 +16,7 @@ in the browser. A live demo is available at https://<your-user>.github.io/textge
   - Rich Text (Quill editor)
   - Notepad (multiple short notes in one tab)
 - Themes (font family, size, background/foreground) per-tab or globally
-- Live preview for Markdown and HTML text tabs (preview button is disabled for other languages/modes)
+- Live preview for Markdown and HTML text tabs, plus JSON when the JSON formatter library is available (preview button is disabled otherwise)
 - Import and export files
 - Keyboard shortcuts (desktop style)
 - State persistence: tabs, contents, preview visibility, cursor/selection, themes
@@ -32,7 +32,7 @@ in the browser. A live demo is available at https://<your-user>.github.io/textge
 2. The first tab appears automatically; use the **+ New** button or
    `Ctrl/Cmd+T` to create additional tabs.
 3. Change the editor mode (Text editing, Rich Text, or Notepad) using the dropdown.
-4. Toggle the preview sidebar with the **Preview** button (enabled only for Text mode with Markdown or HTML language selected).
+4. Toggle the preview sidebar with the **Preview** button (enabled only for Text mode with Markdown, HTML, or JSON language selected).
 5. Edit text – changes are saved automatically in local storage.
 6. **Rename a tab** by double-clicking its title to edit inline. Press Enter
    or click elsewhere to confirm.
@@ -71,7 +71,7 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
    - Content editing and storage per mode
    - Notepad operations (adding and editing notes)
    - Theme settings (open, configure, apply to current or all tabs)
-   - Preview sidebar behavior, including Markdown/HTML-only enablement
+   - Preview sidebar behavior, including Markdown/HTML/JSON-only enablement
    - File export and keyboard shortcuts
    - Global API exposure for programmatic use
    

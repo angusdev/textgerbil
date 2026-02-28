@@ -9,7 +9,8 @@ features or modifications can be added in a spec-driven way.
 TextGerbil is a single-page, browser-only text editor implemented entirely in
 `index.html`. It is designed to run offline and store its state in
 `localStorage`. It supports multiple tabs and several editing modes. Live
-preview is available for Markdown/HTML text tabs.
+preview is available for Markdown/HTML text tabs, and for JSON when the
+JSON formatter library is available.
 
 ## High-Level Architecture
 
@@ -83,12 +84,14 @@ Global configuration includes:
   `language` field.
   - `markdown`: preview rendered with `markdown-it`.
   - `htmlmixed`: preview rendered in an iframe.
+  - `json`: preview rendered as a tree view via `json-formatter-js` when available.
   - other languages: preview unavailable.
 - **rich**: Quill editor with toolbar.
 - **notepad**: custom notes list, each note an independent textarea.
 
 Mode switching shows/hides the appropriate `.editor-instance` div. The preview
-toggle is only enabled for `text` mode with `markdown` or `htmlmixed`.
+toggle is enabled for `text` mode with `markdown` or `htmlmixed`, and for
+`json` only when `window.JSONFormatter` is available.
 
 ## Themes
 
@@ -138,7 +141,7 @@ to load `index.html` with a mocked `localStorage` and execute 80+ test cases:
 3. Content editing and storage per mode
 4. Notepad operations (add/edit notes)
 5. Theme settings (panel open, apply to current tab, apply globally)
-6. Preview behavior (default off, per-tab persistence, Markdown/HTML-only enablement)
+6. Preview behavior (default off, per-tab persistence, Markdown/HTML/JSON-only enablement)
 7. `localStorage` initialization restore matrix (active tab recovery, defaults, theme/notes/content/cursor restore)
 8. Cursor/selection save and restore, including focus restore on tab switch
 9. Export function and keyboard shortcuts

@@ -17,6 +17,9 @@
   <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
   <!-- markdown-it for Markdown preview -->
   <script src="https://cdn.jsdelivr.net/npm/markdown-it@13/dist/markdown-it.min.js"></script>
+  <!-- json-formatter-js for JSON tree preview -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.23/dist/json-formatter.css">
+  <script src="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.23/dist/json-formatter.umd.js"></script>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -345,6 +348,28 @@
           iframe.style.height='80vh';
           iframe.srcdoc=t.content||'';
           pv.appendChild(iframe);
+        } else if(t.language==='json'){
+          const raw=t.content||'';
+          try{
+            const parsed=JSON.parse(raw||'{}');
+            if(window.JSONFormatter){
+              const formatter=new window.JSONFormatter(parsed, 1);
+              pv.appendChild(formatter.render());
+            } else {
+              pv.textContent=raw;
+            }
+          }catch(e){
+            const err=document.createElement('div');
+            err.style.color='#b91c1c';
+            err.style.marginBottom='8px';
+            err.textContent='Invalid JSON: '+(e && e.message ? e.message : 'parse error');
+            const pre=document.createElement('pre');
+            pre.style.whiteSpace='pre-wrap';
+            pre.style.wordBreak='break-word';
+            pre.textContent=raw;
+            pv.appendChild(err);
+            pv.appendChild(pre);
+          }
         } else {
           pv.textContent=t.content
         }
@@ -505,9 +530,16 @@
     function applyPreviewVisibility(tab){
       const preview = document.getElementById('preview');
       if(!preview) return;
-      const canPreview = tab && tab.mode === 'text' && (tab.language === 'markdown' || tab.language === 'htmlmixed');
+      const canPreview = canTabPreview(tab);
       const shouldShow = !!canPreview && !!tab.previewVisible;
       preview.classList.toggle('hidden', !shouldShow);
+    }
+
+    function canTabPreview(tab){
+      if(!tab || tab.mode!=='text') return false;
+      if(tab.language==='markdown' || tab.language==='htmlmixed') return true;
+      if(tab.language==='json') return !!window.JSONFormatter;
+      return false;
     }
 
     function switchEditorMode(mode, tabId){
@@ -566,9 +598,10 @@
       const btn=document.getElementById('togglePreview');
       if(!preview||!btn) return;
       const t=tabs.find(x=>x.id===activeId);
-      const canPreview=t && t.mode==='text' && (t.language==='markdown' || t.language==='htmlmixed');
+      const canPreview=canTabPreview(t);
       btn.disabled=!canPreview;
-      btn.title=canPreview?'Toggle preview':'Preview available only for Markdown/HTML';
+      const jsonReady=!!window.JSONFormatter;
+      btn.title=canPreview?'Toggle preview':(jsonReady?'Preview available only for Markdown/HTML/JSON':'Preview available only for Markdown/HTML (JSON formatter unavailable)');
       const isVisible=!preview.classList.contains('hidden');
       btn.classList.toggle('is-active', isVisible);
       btn.setAttribute('aria-pressed', String(isVisible));
@@ -593,7 +626,7 @@
       const t=tabs.find(x=>x.id===activeId);
       if(t && t.mode==='text'){
         t.language=e.target.value;
-        if(t.language!=='markdown' && t.language!=='htmlmixed'){
+        if(!canTabPreview(t)){
           t.previewVisible=false;
         }
         if(editors[t.id] && editors[t.id].cm){
@@ -607,7 +640,7 @@
     })
     document.getElementById('togglePreview').onclick=()=>{
       const t=tabs.find(x=>x.id===activeId);
-      if(!t || t.mode!=='text' || (t.language!=='markdown' && t.language!=='htmlmixed')) return;
+      if(!canTabPreview(t)) return;
       t.previewVisible = !t.previewVisible;
       applyPreviewVisibility(t);
       save();
