@@ -17,47 +17,53 @@
   <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
   <!-- markdown-it for Markdown preview -->
   <script src="https://cdn.jsdelivr.net/npm/markdown-it@13/dist/markdown-it.min.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (window.tailwind) {
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                500: '#2b8be6',
+                600: '#1f74c6'
+              }
+            }
+          }
+        }
+      };
+    }
+  </script>
   <style>
-    :root{--gap:10px;--bg:#fafafa;--fg:#111;--accent:#2b8be6}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--fg);background:var(--bg)}
-    .app{display:flex;flex-direction:column;height:100vh}
-    header{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid #e6e6e6}
-    header h1{margin:0;font-size:16px}
-    .tabs{display:flex;align-items:center;gap:6px;overflow:auto;padding:6px}
-    .tab{background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;display:flex;gap:8px;align-items:center;cursor:pointer}
-    .tab.active{border-color:var(--accent);box-shadow:0 0 0 3pxrgba(43,139,230,0.06)}
-    .tab .close{font-weight:700;color:#888;cursor:pointer}
-    .toolbar{margin-left:auto;display:flex;gap:8px;align-items:center}
-    main{flex:1;display:flex;overflow:hidden}
-    .editor-area{flex:1;display:flex;flex-direction:column;padding:12px;gap:8px}
-    .editor{flex:1;display:flex}
-    textarea{flex:1;width:100%;height:100%;resize:none;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;border:1px solid #e1e1e1;border-radius:6px;background:white;color:inherit}
+    :root{--accent:#2b8be6}
+    html,body{height:100%;margin:0}
+    textarea{flex:1;width:100%;height:100%;resize:none;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;border:1px solid #e2e8f0;border-radius:8px;background:white;color:inherit}
     .editor-instance{flex:1;width:100%;height:100%;display:none}
     .editor-instance.active{display:flex}
     .CodeMirror{flex:1;width:100%;height:100%;font-size:14px}
     .ql-container{flex:1;width:100%;height:100%;overflow:auto}
     .ql-editor{min-height:100%;padding:12px}
-    .sidebar{width:360px;border-left:1px solid #eee;padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
     .hidden{display:none}
-    .settings{padding:8px;border-top:1px solid #eee}
-    label{font-size:13px}
-    .btn{background:var(--accent);color:#fff;padding:6px 10px;border-radius:6px;border:none;cursor:pointer}
-    .small{padding:4px 6px;font-size:13px}
+    .settings label{font-size:13px}
+    .btn{background:var(--accent);color:#fff;padding:6px 10px;border-radius:8px;border:none;cursor:pointer}
+    .small{padding:6px 10px;font-size:13px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;cursor:pointer}
+    .small:hover{background:#f8fafc}
   </style>
 </head>
-<body>
-  <div class="app">
-    <header>
-      <h1>TextGerbil</h1>
-      <div class="tabs" id="tabs"></div>
-      <div class="toolbar">
+<body class="min-h-screen bg-slate-100 text-slate-900">
+  <div class="app min-h-screen flex flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-sky-100">
+    <header class="flex items-center gap-3 border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur">
+      <h1 class="m-0 text-base font-semibold tracking-tight">TextGerbil</h1>
+      <div class="tabs flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1" id="tabs"></div>
+      <div class="toolbar ml-auto flex items-center gap-2">
         <button id="addTab" class="btn small" aria-label="New tab">+ New</button>
-        <select id="modeSelect" title="Mode" aria-label="Select editor mode">
+        <select id="modeSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Mode" aria-label="Select editor mode">
           <option value="text">Text</option>
           <option value="rich">Rich Text</option>
           <option value="notepad">Notepad</option>
         </select>
-        <select id="languageSelect" title="Language" aria-label="Select language for syntax highlighting" style="display:none;">
+        <select id="languageSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Language" aria-label="Select language for syntax highlighting" style="display:none;">
           <option value="plain">Plain</option>
           <option value="javascript">JavaScript</option>
           <option value="python">Python</option>
@@ -74,32 +80,32 @@
       </div>
     </header>
 
-    <main>
-      <section class="editor-area">
-        <div style="display:flex;gap:8px;align-items:center">
-          <div id="tabTitle" style="font-weight:600"></div>
-          <div style="margin-left:auto">Theme: <button id="themeBtn" class="small">Settings</button></div>
+    <main class="flex flex-1 overflow-hidden p-3">
+      <section class="editor-area flex flex-1 flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="flex items-center gap-2">
+          <div id="tabTitle" class="font-semibold text-slate-800"></div>
+          <div class="ml-auto text-sm text-slate-600">Theme: <button id="themeBtn" class="small">Settings</button></div>
         </div>
-        <div class="editor">
+        <div class="editor flex flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div id="textEditor" class="editor-instance active"></div>
           <div id="richEditor" class="editor-instance"></div>
-          <div id="notepadEditor" class="editor-instance" style="flex-direction:column;gap:6px;overflow:auto;padding:6px">
+          <div id="notepadEditor" class="editor-instance flex-col gap-2 overflow-auto p-2">
             <button id="addNoteBtn" class="small btn" style="align-self:flex-start">+ Note</button>
-            <div id="notesContainer" style="display:flex;flex-direction:column;gap:6px"></div>
+            <div id="notesContainer" class="flex flex-col gap-2"></div>
           </div>
         </div>
-        <div class="settings" id="settingsPanel" style="display:none">
-          <label>Font family: <input id="fontFamily" placeholder="e.g. Inter, monospace"/></label>
-          <label>Font size: <input id="fontSize" type="number" min="10" max="48" value="14"/></label>
-          <label>Background: <input id="bgColor" type="color" value="#ffffff"/></label>
-          <label>Foreground: <input id="fgColor" type="color" value="#111111"/></label>
+        <div class="settings grid grid-cols-1 gap-2 border-t border-slate-200 pt-2 md:grid-cols-2" id="settingsPanel" style="display:none">
+          <label class="text-sm text-slate-700">Font family: <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm" id="fontFamily" placeholder="e.g. Inter, monospace"/></label>
+          <label class="text-sm text-slate-700">Font size: <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm" id="fontSize" type="number" min="10" max="48" value="14"/></label>
+          <label class="text-sm text-slate-700">Background: <input class="mt-1 h-9 w-full rounded-lg border border-slate-300 px-1" id="bgColor" type="color" value="#ffffff"/></label>
+          <label class="text-sm text-slate-700">Foreground: <input class="mt-1 h-9 w-full rounded-lg border border-slate-300 px-1" id="fgColor" type="color" value="#111111"/></label>
           <div style="margin-top:8px"><button id="applyTheme" class="btn small">Apply to current</button> <button id="applyGlobal" class="small">Apply to all</button></div>
         </div>
       </section>
 
-      <aside class="sidebar hidden" id="preview">
-        <div style="font-weight:700">Preview</div>
-        <div id="previewContent" style="flex:1;overflow:auto;padding-top:6px"></div>
+      <aside class="sidebar hidden ml-3 flex w-[360px] flex-col gap-2 overflow-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm" id="preview">
+        <div class="font-bold text-slate-800">Preview</div>
+        <div id="previewContent" class="flex-1 overflow-auto pt-1 text-slate-700"></div>
       </aside>
     </main>
   </div>
@@ -172,7 +178,7 @@
       input.onblur=confirmRename;
     }
 
-    function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');d.className='tab'+(t.id===activeId?' active':'');const titleSpan=document.createElement('span');titleSpan.textContent=t.title||'Untitled';titleSpan.ondblclick=(e)=>{e.stopPropagation();enableTabRename(d,t.id)};d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close';closeSpan.textContent='×';closeSpan.title='Close';
+    function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');const base='tab group inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';d.className=base+state;const titleSpan=document.createElement('span');titleSpan.className='truncate max-w-40';titleSpan.textContent=t.title||'Untitled';titleSpan.ondblclick=(e)=>{e.stopPropagation();enableTabRename(d,t.id)};d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close text-slate-400 hover:text-rose-500';closeSpan.textContent='×';closeSpan.title='Close';
       closeSpan.onclick=(e)=>{e.stopPropagation();try{closeTab(t.id);}catch(err){console.error('closeTab error',err);}};
       d.appendChild(closeSpan);d.onclick=(e)=>{if(e.detail===1)selectTab(t.id)};el.appendChild(d)})}
 
