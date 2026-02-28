@@ -1,13 +1,12 @@
 # TextGerbil
 
-> ⚠️ **Disclaimer:** this is a personal "vibe-coding" project—written in a
-> stream-of-consciousness style. The source may look messy; instead of trying to
-> understand every line, just hand the file to an AI assistant and ask it to
-> make the changes you want.
-
 **TextGerbil** is a single-file, web-based text editor that runs entirely
-in the browser. A live demo is available at https://<your-user>.github.io/textgerbil/ – just open
-`index.html` on any machine (no server required) and it stores your tabs, contents and settings in `localStorage`.
+in the browser. Open `index.html` on any machine (no server required) and it
+stores your tabs, contents and settings in `localStorage`.
+
+## Demo
+
+Live demo: https://angusdev.github.io/textgerbil
 
 ## Features
 
@@ -113,3 +112,8 @@ Issue reports and pull requests are welcome; the repository includes a
 A GitHub Action (`.github/workflows/gh-pages.yml`) automatically runs the
 suite and publishes the contents of the repo to the `gh-pages` branch so the
 app can be hosted via GitHub Pages.
+
+> ⚠️ **Disclaimer:** this is a personal "vibe-coding" project—written in a
+> stream-of-consciousness style. The source may look messy; instead of trying to
+> understand every line, just hand the file to an AI assistant and ask it to
+> make the changes you want.
