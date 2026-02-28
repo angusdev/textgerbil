@@ -16,9 +16,10 @@ in the browser. A live demo is available at https://<your-user>.github.io/textge
   - Rich Text (Quill editor)
   - Notepad (multiple short notes in one tab)
 - Themes (font family, size, background/foreground) per-tab or globally
+- Live preview for Markdown and HTML text tabs (preview button is disabled for other languages/modes)
 - Import and export files
 - Keyboard shortcuts (desktop style)
-- State persistence: tabs, contents, cursor/selection, themes
+- State persistence: tabs, contents, preview visibility, cursor/selection, themes
 - Runs entirely in one `index.html` file using CDN libraries
 
 > External libraries are loaded via `<script>` tags from CDNs – you
@@ -31,7 +32,7 @@ in the browser. A live demo is available at https://<your-user>.github.io/textge
 2. The first tab appears automatically; use the **+ New** button or
    `Ctrl/Cmd+T` to create additional tabs.
 3. Change the editor mode (Text editing, Rich Text, or Notepad) using the dropdown.
-4. Toggle the preview sidebar with the **Preview** button.
+4. Toggle the preview sidebar with the **Preview** button (enabled only for Text mode with Markdown or HTML language selected).
 5. Edit text – changes are saved automatically in local storage.
 6. **Rename a tab** by double-clicking its title to edit inline. Press Enter
    or click elsewhere to confirm.
@@ -62,14 +63,15 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
    npm install
    npm test
    ```
-   The test suite (`test/run_headless_test.js`) includes **25+ test cases** covering:
-   (recent additions include a case that closes a tab via the UI and ensures no JavaScript exception is thrown – this caught and fixed a bug where closing a CodeMirror tab could trigger errors.  Editor initialization now defensively checks `toTextArea()` before invoking it to prevent type errors when switching tabs.)
+   The test suite (`test/run_headless_test.js`) currently includes **80+ test cases** covering:
    - Tab creation, switching, and renaming (both API and UI double-click)
+   - Tab switching restores focus and prior cursor/selection position
+   - Initialization from `localStorage` across multiple saved-state combinations
    - All 3 editor modes (text editing, rich text, notepad)
    - Content editing and storage per mode
    - Notepad operations (adding and editing notes)
    - Theme settings (open, configure, apply to current or all tabs)
-   - Preview sidebar toggle
+   - Preview sidebar behavior, including Markdown/HTML-only enablement
    - File export and keyboard shortcuts
    - Global API exposure for programmatic use
    

@@ -8,8 +8,8 @@ features or modifications can be added in a spec-driven way.
 
 TextGerbil is a single-page, browser-only text editor implemented entirely in
 `index.html`. It is designed to run offline and store its state in
-`localStorage`. It supports multiple tabs and several editing modes with live
-preview features.
+`localStorage`. It supports multiple tabs and several editing modes. Live
+preview is available for Markdown/HTML text tabs.
 
 ## High-Level Architecture
 
@@ -30,7 +30,8 @@ Each tab object has the following shape:
 {
   id: string,          // unique identifier
   title: string,       // shown in tab label
-  mode: string,        // one of: plain, code, markdown, rich, html, notepad
+  mode: string,        // one of: text, rich, notepad
+  language: string,    // text mode language (plain, javascript, python, markdown, htmlmixed, css, json, sql)
   content: string,     // raw text/HTML stored
   theme: {             // optional styling overrides
     fontFamily?: string,
@@ -38,6 +39,7 @@ Each tab object has the following shape:
     bg?: string,
     fg?: string
   },
+  previewVisible: boolean, // per-tab preview visibility state
   cursor?: any,        // mode-specific cursor/selection state
   notepadData?: Array, // used when mode === 'notepad'
 }
@@ -62,8 +64,9 @@ Global configuration includes:
 - `uid()` - generate unique identifiers.
 - `save()` / `load()` - persist and restore state from `localStorage`.
 - `renderTabs()` - redraw the tab bar.
-- `selectTab(id)` - switch active tab, save previous state, restore cursor.
+- `selectTab(id)` - switch active tab, save previous state, restore cursor, and focus the editor area.
 - `newTab(mode)` / `closeTab(id)` - manage tab lifecycle.  
+  `newTab` saves current editor state before switching to a newly-created tab so prior tab state is preserved.
   When closing a tab the implementation now also disposes any associated editor instance (e.g. CodeMirror or Quill) and removes it from the `editors` cache; this prevents errors when the DOM node is torn down.  
   In addition, `initCodeMirror()` and other locations guard against calling `toTextArea()` unless it is a function, avoiding exceptions if the cached editor reference is malformed.
 - `getEditorContent()` / `setEditorContent(content)` - read/write current
@@ -76,20 +79,23 @@ Global configuration includes:
 
 ## Editing Modes
 
-- **plain**: simple `<textarea>`.
-- **code**: CodeMirror instance, default mode JavaScript, uses CDN.
-- **markdown**: `<textarea>` editing with live preview via `markdown-it`.
+- **text**: CodeMirror-based text editor. Syntax behavior is selected by the
+  `language` field.
+  - `markdown`: preview rendered with `markdown-it`.
+  - `htmlmixed`: preview rendered in an iframe.
+  - other languages: preview unavailable.
 - **rich**: Quill editor with toolbar.
-- **html**: `<textarea>` with iframe preview.
 - **notepad**: custom notes list, each note an independent textarea.
 
-Mode switching shows/hides the appropriate `.editor-instance` div.
+Mode switching shows/hides the appropriate `.editor-instance` div. The preview
+toggle is only enabled for `text` mode with `markdown` or `htmlmixed`.
 
 ## Themes
 
 Users can set font family, size, background and foreground colors via the
-settings panel. Themes can apply to the current tab or globally; global
-settings propagate to new and existing tabs.
+settings panel. Themes can apply to the current tab or globally. Applying
+global settings updates existing tabs and future tabs; on startup restore,
+existing per-tab themes from storage are preserved.
 
 ## Tab Renaming
 
@@ -124,17 +130,19 @@ for inline editing.
 ## Testing
 
 A comprehensive headless test suite (`test/run_headless_test.js`) uses `jsdom`
-to load `index.html` with a mocked `localStorage` and execute 25 test cases:
+to load `index.html` with a mocked `localStorage` and execute 80+ test cases:
 
 **Test Coverage:**
 1. Tab management (create, switch, rename via API and UI double-click)
-2. All editor modes (plain, code, markdown, rich, html, notepad)
+2. All editor modes (text, rich, notepad) and language switching in text mode
 3. Content editing and storage per mode
 4. Notepad operations (add/edit notes)
 5. Theme settings (panel open, apply to current tab, apply globally)
-6. Preview sidebar toggle
-7. Export function and keyboard shortcuts
-8. Global API accessibility (`window.__textgerbil`)
+6. Preview behavior (default off, per-tab persistence, Markdown/HTML-only enablement)
+7. `localStorage` initialization restore matrix (active tab recovery, defaults, theme/notes/content/cursor restore)
+8. Cursor/selection save and restore, including focus restore on tab switch
+9. Export function and keyboard shortcuts
+10. Global API accessibility (`window.__textgerbil`)
 
 The suite is not a substitute for manual browser testing but effectively
 catches syntax errors, runtime issues, and feature regressions.
@@ -147,7 +155,7 @@ npm install
 npm test
 ```
 
-Expected output: `Passed: 25, Failed: 0`
+Expected output: `Failed: 0`
 
 ## Modification Guidelines for AI
 
