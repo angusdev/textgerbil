@@ -59,7 +59,7 @@ const { JSDOM } = require('jsdom');
     }
   }
 
-  dom.window.addEventListener('load', () => {
+  dom.window.addEventListener('load', async () => {
     try {
       const doc = dom.window.document;
       const w = dom.window;
@@ -71,6 +71,47 @@ const { JSDOM } = require('jsdom');
         try { return JSON.parse(raw); } catch (e) { return null; }
       };
       const getWriteCount = (key) => w.localStorage.writes.filter(x => x.key === key).length;
+      const runLocalStorageInitScenario = async (name, seededStorage, verify) => {
+        const scenarioDom = new JSDOM(html, {
+          runScripts: 'dangerously',
+          resources: 'usable',
+          beforeParse(window) {
+            window.__TEXTGERBIL_HEADLESS = true;
+            const mock = {
+              data: { ...seededStorage },
+              writes: [],
+              getItem(key) { return this.data[key] || null; },
+              setItem(key, value) {
+                this.data[key] = String(value);
+                this.writes.push({ key, value: String(value) });
+              },
+              removeItem(key) { delete this.data[key]; },
+              clear() { this.data = {}; this.writes = []; }
+            };
+            Object.defineProperty(window, 'localStorage', { value: mock });
+          }
+        });
+        scenarioDom.window.Element.prototype.getBoundingClientRect = function(){
+          return {x:0,y:0,left:0,top:0,right:0,bottom:0,width:0,height:0};
+        };
+        if(!scenarioDom.window.document.execCommand){
+          scenarioDom.window.document.execCommand = () => false;
+        }
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error(`${name} timed out waiting for load`)), 3000);
+          scenarioDom.window.addEventListener('load', () => {
+            clearTimeout(timeout);
+            resolve();
+          }, { once: true });
+        });
+        try {
+          await verify(scenarioDom.window, scenarioDom.window.document);
+        } catch (err) {
+          assert(false, `${name} threw: ${err.message}`);
+        } finally {
+          scenarioDom.window.close();
+        }
+      };
 
       // Test 1: Initial state
       const tabsEl = doc.getElementById('tabs');
@@ -85,7 +126,8 @@ const { JSDOM } = require('jsdom');
       // Test 3: Language switching - plain to javascript
       doc.getElementById('languageSelect').value = 'javascript';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
-      const t = w.__textgerbil.tabs.find(x => x.id === w.__textgerbil.tabs[0].id);
+      const activeTabIdForLanguageTests = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      const t = w.__textgerbil.tabs.find(x => x.id === activeTabIdForLanguageTests);
       assert(t && t.language === 'javascript', 'Language switched to javascript');
 
       // Test 4: Language switching - javascript to python
@@ -358,17 +400,178 @@ const { JSDOM } = require('jsdom');
         assert(false, 'No close button found for close test');
       }
 
-      console.log(`\n=== Test Summary ===\nPassed: ${testsPassed}\nFailed: ${testsFailed}\n`);
+      // Test 32: Initialize tabs and per-tab settings from localStorage (full settings)
+      await runLocalStorageInitScenario(
+        'init-full-settings',
+        {
+          [STORAGE_KEY]: JSON.stringify({
+            tabs: [
+              {
+                id: 'tab-alpha',
+                title: 'README.md',
+                mode: 'text',
+                language: 'markdown',
+                content: '# Alpha',
+                theme: { fontFamily: 'serif', fontSize: 13, bg: '#fafafa', fg: '#111111' },
+                previewVisible: true
+              },
+              {
+                id: 'tab-beta',
+                title: 'Notes',
+                mode: 'notepad',
+                content: JSON.stringify([{ id: 'n1', text: 'todo 1' }, { id: 'n2', text: 'todo 2' }]),
+                theme: { fontFamily: 'monospace', fontSize: 16, bg: '#101010', fg: '#f0f0f0' },
+                previewVisible: false
+              }
+            ],
+            activeId: 'tab-beta'
+          }),
+          [STORAGE_GLOBAL]: JSON.stringify({ fontFamily: 'cursive', fontSize: 18, bg: '#ffeeaa', fg: '#222222' })
+        },
+        (sw, sdoc) => {
+          assert(sw.__textgerbil.tabs.length === 2, 'Init from storage restores tab count');
+          assert(sdoc.querySelectorAll('.tab').length === 2, 'Init from storage renders tab bar entries');
+          assert(sdoc.getElementById('tabTitle').textContent === 'Notes', 'Init from storage restores active tab');
+          assert(sdoc.getElementById('modeSelect').value === 'notepad', 'Init from storage restores active tab mode');
+          assert(sdoc.querySelectorAll('#notesContainer textarea').length === 2, 'Init from storage restores notepad notes');
+          const restoredActive = sw.__textgerbil.tabs.find(x => x.id === 'tab-beta');
+          assert(restoredActive && restoredActive.theme && restoredActive.theme.fontFamily === 'monospace', 'Init keeps per-tab theme from storage');
+          assert(sdoc.getElementById('notesContainer').style.fontFamily === 'monospace', 'Init applies restored active tab theme');
+        }
+      );
+
+      // Test 33: Initialize with empty saved tabs should still create one tab
+      await runLocalStorageInitScenario(
+        'init-empty-tabs',
+        { [STORAGE_KEY]: JSON.stringify({ tabs: [], activeId: null }) },
+        (sw, sdoc) => {
+          assert(sw.__textgerbil.tabs.length === 1, 'Init with empty tabs creates a default tab');
+          assert(sdoc.querySelectorAll('.tab').length === 1, 'Init with empty tabs renders one tab');
+        }
+      );
+
+      // Test 34: Initialize with invalid activeId should select first available tab
+      await runLocalStorageInitScenario(
+        'init-invalid-active-id',
+        {
+          [STORAGE_KEY]: JSON.stringify({
+            tabs: [
+              { id: 'first-tab', title: 'first.js', mode: 'text', content: 'a', theme: {}, previewVisible: false },
+              { id: 'second-tab', title: 'second.md', mode: 'text', content: 'b', theme: {}, previewVisible: false }
+            ],
+            activeId: 'does-not-exist'
+          })
+        },
+        (_sw, sdoc) => {
+          const active = Array.from(sdoc.querySelectorAll('.tab')).find(x => x.className.includes('border-brand-500'));
+          assert(!!active, 'Init with invalid activeId still marks an active tab');
+          assert(sdoc.getElementById('tabTitle').textContent === 'first.js', 'Init with invalid activeId falls back to first tab');
+        }
+      );
+
+      // Test 35: Initialize defaults for missing tab fields
+      await runLocalStorageInitScenario(
+        'init-missing-fields',
+        {
+          [STORAGE_KEY]: JSON.stringify({
+            tabs: [{ id: 'script-tab', title: 'script.js', mode: 'text', content: 'console.log(1);', theme: {} }],
+            activeId: 'script-tab'
+          })
+        },
+        (sw, sdoc) => {
+          const restored = sw.__textgerbil.tabs.find(x => x.id === 'script-tab');
+          assert(restored && restored.previewVisible === false, 'Init sets missing previewVisible to false');
+          assert(restored && restored.language === 'javascript', 'Init infers missing language for active text tab');
+          assert(sdoc.getElementById('languageSelect').value === 'javascript', 'Init syncs inferred language to selector');
+        }
+      );
+
+      // Test 36: Initialize text content and text cursor from localStorage
+      await runLocalStorageInitScenario(
+        'init-text-content-cursor',
+        {
+          [STORAGE_KEY]: JSON.stringify({
+            tabs: [{
+              id: 'text-cursor-tab',
+              title: 'main.py',
+              mode: 'text',
+              language: 'python',
+              content: 'print(\"cursor\")',
+              theme: {},
+              previewVisible: false,
+              cursor: { line: 3, ch: 7 }
+            }],
+            activeId: 'text-cursor-tab'
+          })
+        },
+        async (sw) => {
+          const restored = sw.__textgerbil.tabs.find(x => x.id === 'text-cursor-tab');
+          assert(restored && restored.content === 'print(\"cursor\")', 'Init restores text content');
+          const cm = sw.__textgerbil.editors['text-cursor-tab'] && sw.__textgerbil.editors['text-cursor-tab'].cm;
+          assert(cm && cm.getValue() === 'print(\"cursor\")', 'Init loads text editor content');
+          await new Promise(resolve => setTimeout(resolve, 180));
+          const cursor = cm && cm.getCursor ? cm.getCursor() : null;
+          assert(cursor && cursor.line === 3 && cursor.ch === 7, 'Init restores text cursor position');
+        }
+      );
+
+      // Test 37: Initialize rich content from localStorage
+      await runLocalStorageInitScenario(
+        'init-rich-content',
+        {
+          [STORAGE_KEY]: JSON.stringify({
+            tabs: [{
+              id: 'rich-tab',
+              title: 'doc',
+              mode: 'rich',
+              content: '<p><strong>Rich hello</strong></p>',
+              theme: {},
+              previewVisible: false
+            }],
+            activeId: 'rich-tab'
+          })
+        },
+        (sw, sdoc) => {
+          const restored = sw.__textgerbil.tabs.find(x => x.id === 'rich-tab');
+          assert(restored && restored.content === '<p><strong>Rich hello</strong></p>', 'Init restores rich content in tab state');
+          const richRoot = sdoc.querySelector('#quill-root');
+          assert(!!richRoot, 'Init creates rich editor root');
+          const richEditor = sw.__textgerbil.editors['rich-tab'] && sw.__textgerbil.editors['rich-tab'].quill;
+          assert(richEditor && richEditor.root && richEditor.root.innerHTML === '<p><strong>Rich hello</strong></p>', 'Init loads rich editor content');
+        }
+      );
+
+      // Test 38: Initialize notepad cursor from localStorage
+      await runLocalStorageInitScenario(
+        'init-notepad-cursor',
+        {
+          [STORAGE_KEY]: JSON.stringify({
+            tabs: [{
+              id: 'np-tab',
+              title: 'notes',
+              mode: 'notepad',
+              content: JSON.stringify([{ id: 'a', text: 'first note' }, { id: 'b', text: 'second note' }]),
+              theme: {},
+              previewVisible: false,
+              cursor: { noteId: 'b', start: 2, end: 6 }
+            }],
+            activeId: 'np-tab'
+          })
+        },
+        async (_sw, sdoc) => {
+          await new Promise(resolve => setTimeout(resolve, 180));
+          const focused = sdoc.activeElement;
+          assert(focused && focused.tagName === 'TEXTAREA' && focused.dataset.noteId === 'b', 'Init restores notepad focused note from cursor');
+          assert(focused && focused.selectionStart === 2 && focused.selectionEnd === 6, 'Init restores notepad cursor range');
+        }
+      );
 
     } catch (e) {
       console.error('test error', e);
       testsFailed++;
+    } finally {
+      console.log(`\n=== Test Summary ===\nPassed: ${testsPassed}\nFailed: ${testsFailed}\n`);
+      process.exit(testsFailed ? 1 : 0);
     }
   });
-
-  // give it a few seconds to load external scripts
-  setTimeout(() => {
-    console.log('test finished');
-    process.exit(0);
-  }, 3000);
 })();

@@ -199,10 +199,27 @@
 
     function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Untitled',mode:'text',language:'plain',content:'',theme:{},previewVisible:false});activeId=tabs[0].id}}
 
+    function normalizeLoadedTab(rawTab){
+      if(!rawTab || typeof rawTab!=='object') return null;
+      const tab = Object.assign({}, rawTab);
+      tab.id = tab.id || uid();
+      tab.title = (tab.title||'Untitled').toString();
+      tab.mode = ['text','rich','notepad'].includes(tab.mode) ? tab.mode : 'text';
+      tab.content = typeof tab.content==='string' ? tab.content : '';
+      tab.theme = (tab.theme && typeof tab.theme==='object') ? tab.theme : {};
+      if(tab.mode==='text'){
+        tab.language = tab.language || detectLanguageFromTitle(tab.title) || 'plain';
+      } else {
+        tab.language = tab.language || 'plain';
+      }
+      if(typeof tab.previewVisible!=='boolean') tab.previewVisible=false;
+      return tab;
+    }
+
     function selectTab(id){
       const t=tabs.find(x=>x.id===id);
       if(!t) return;
-      saveCurrentEditor();
+      if(activeId && activeId!==id) saveCurrentEditor();
       activeId=id;
       document.getElementById('tabTitle').textContent=t.title;
       document.getElementById('modeSelect').value=t.mode;
@@ -388,6 +405,9 @@
       textEditorEl.innerHTML='';
       // headless environment (tests) may set a flag to avoid CodeMirror's heavy logic
       if(window.__TEXTGERBIL_HEADLESS){
+        let headlessCursor = t.cursor && typeof t.cursor.line==='number' && typeof t.cursor.ch==='number'
+          ? {line:t.cursor.line, ch:t.cursor.ch}
+          : {line:0,ch:0};
         ed.cm = {
           getValue:()=>t.content||'',
           setValue:(v)=>{t.content=v;},
@@ -396,8 +416,12 @@
           focus:()=>{},
           toTextArea:()=>{},
           getWrapperElement:()=>({style:{}}),
-          getCursor:()=>({line:0,ch:0}),
-          setCursor:()=>{}
+          getCursor:()=>({line:headlessCursor.line,ch:headlessCursor.ch}),
+          setCursor:(c)=>{
+            if(c && typeof c.line==='number' && typeof c.ch==='number'){
+              headlessCursor={line:c.line,ch:c.ch};
+            }
+          }
         };
         return;
       }
@@ -566,8 +590,18 @@
     }
 
     // Initialization
-    if(!load()){tabs=[];ensureAtLeastOne()}
-    tabs.forEach(t=>{if(typeof t.previewVisible!=='boolean') t.previewVisible=false;});
+    if(!load()){tabs=[];}
+    if(!Array.isArray(tabs)) tabs=[];
+    tabs=tabs.map(normalizeLoadedTab).filter(Boolean);
+    if(globalTheme){
+      tabs.forEach(t=>{
+        if(!t.theme || Object.keys(t.theme).length===0){
+          t.theme=Object.assign({},globalTheme);
+        }
+      });
+    }
+    ensureAtLeastOne();
+    if(!tabs.find(x=>x.id===activeId)) activeId=tabs[0].id;
     initMarkdownIt();
     renderTabs();
     selectTab(activeId);
@@ -582,11 +616,6 @@
           if(area){area.focus();area.setSelectionRange(t.cursor.start||0,t.cursor.end||0);}
         }
       },100);
-    }
-    // apply global theme after load
-    if(globalTheme){
-      tabs.forEach(t=>t.theme=Object.assign({},globalTheme));
-      if(tabs.length && tabs.find(x=>x.id===activeId)) applyThemeToEditor(globalTheme);
     }
     syncPreviewToggleState();
 
