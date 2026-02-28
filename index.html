@@ -58,7 +58,7 @@
     <header class="border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur">
       <div class="flex items-center gap-3">
       <h1 class="m-0 text-base font-semibold tracking-tight">TextGerbil</h1>
-      <div class="tabs flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1" id="tabs"></div>
+      <div class="tabs flex min-w-0 flex-1 items-center gap-2 overflow-hidden py-1" id="tabs"></div>
         <button id="addTab" class="btn small" aria-label="New tab" title="New">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -193,7 +193,7 @@
       input.onblur=confirmRename;
     }
 
-    function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');const base='tab group inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';d.className=base+state;const titleSpan=document.createElement('span');titleSpan.className='truncate max-w-40';titleSpan.textContent=t.title||'Untitled';titleSpan.ondblclick=(e)=>{e.stopPropagation();enableTabRename(d,t.id)};d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close text-slate-400 hover:text-rose-500';closeSpan.textContent='×';closeSpan.title='Close';
+    function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');const base='tab group inline-flex min-w-0 flex-initial items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';d.className=base+state;const titleSpan=document.createElement('span');titleSpan.className='min-w-0 truncate';titleSpan.textContent=t.title||'Untitled';titleSpan.ondblclick=(e)=>{e.stopPropagation();enableTabRename(d,t.id)};d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close shrink-0 text-slate-400 hover:text-rose-500';closeSpan.textContent='×';closeSpan.title='Close';
       closeSpan.onclick=(e)=>{e.stopPropagation();try{closeTab(t.id);}catch(err){console.error('closeTab error',err);}};
       d.appendChild(closeSpan);d.onclick=(e)=>{if(e.detail===1)selectTab(t.id)};el.appendChild(d)})}
 
