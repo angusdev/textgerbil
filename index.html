@@ -215,6 +215,7 @@
       applyThemeToEditor(t.theme);
       renderTabs();
       updatePreview();
+      save();
       // restore cursor after rendering
       setTimeout(()=>{
         if(t.cursor){
@@ -632,7 +633,7 @@
     });
 
     // expose for debugging
-    window.__textgerbil = {tabs,save,load,newTab,closeTab,editors,initCodeMirror,initQuill,exportCurrent,detectLanguageFromTitle,renderTabs}
+    window.__textgerbil = {tabs,save,load,newTab,closeTab,selectTab,editors,initCodeMirror,initQuill,exportCurrent,detectLanguageFromTitle,renderTabs}
   </script>
 </body>
 </html>

@@ -25,8 +25,12 @@ const { JSDOM } = require('jsdom');
   // Mock localStorage to avoid JSDOM SecurityError
   const mockLocalStorage = {
     data: {},
+    writes: [],
     getItem(key) { return this.data[key] || null; },
-    setItem(key, value) { this.data[key] = String(value); },
+    setItem(key, value) {
+      this.data[key] = String(value);
+      this.writes.push({ key, value: String(value) });
+    },
     removeItem(key) { delete this.data[key]; },
     clear() { this.data = {}; }
   };
@@ -59,6 +63,14 @@ const { JSDOM } = require('jsdom');
     try {
       const doc = dom.window.document;
       const w = dom.window;
+      const STORAGE_KEY = 'textgerbil_v1_tabs';
+      const STORAGE_GLOBAL = 'textgerbil_v1_global';
+      const getSavedState = () => {
+        const raw = w.localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch (e) { return null; }
+      };
+      const getWriteCount = (key) => w.localStorage.writes.filter(x => x.key === key).length;
 
       // Test 1: Initial state
       const tabsEl = doc.getElementById('tabs');
@@ -120,8 +132,8 @@ const { JSDOM } = require('jsdom');
       assert(doc.getElementById('notepadEditor').classList.contains('active'), 'Notepad editor activated');
 
       // Test 12: Notepad - add notes
-      const addNoteBtn = doc.getElementById('addNoteBtn');
-      addNoteBtn.click();
+      const addNoteBtnForAutosave = doc.getElementById('addNoteBtn');
+      addNoteBtnForAutosave.click();
       const notes = doc.querySelectorAll('#notesContainer textarea');
       assert(notes.length === 1, 'Note added to notepad');
 
@@ -131,7 +143,7 @@ const { JSDOM } = require('jsdom');
       assert(notes[0].value === 'Test note', 'Note edited');
 
       // Test 14: Notepad - add another note
-      addNoteBtn.click();
+      addNoteBtnForAutosave.click();
       const notesAfter = doc.querySelectorAll('#notesContainer textarea');
       assert(notesAfter.length === 2, 'Second note added');
 
@@ -148,7 +160,123 @@ const { JSDOM } = require('jsdom');
       doc.getElementById('applyTheme').click();
       assert(true, 'Theme applied to current tab without error');
 
-      // Test 17: Tab switching
+      // Test 17: Autosave on tab switch (content persisted)
+      w.__textgerbil.newTab('text');
+      const switchSourceId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(switchSourceId);
+      const sourceEd = w.__textgerbil.editors[switchSourceId];
+      if (sourceEd && sourceEd.cm) sourceEd.cm.setValue('autosave-switch-content');
+      w.__textgerbil.newTab('text');
+      const switchTargetId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      const writesBeforeSwitch = getWriteCount(STORAGE_KEY);
+      w.__textgerbil.selectTab(switchSourceId);
+      w.__textgerbil.selectTab(switchTargetId);
+      const writesAfterSwitch = getWriteCount(STORAGE_KEY);
+      const switchSaved = getSavedState();
+      assert(writesAfterSwitch > writesBeforeSwitch, 'Switching tab triggers autosave');
+      assert(switchSaved && switchSaved.activeId === switchTargetId, 'Tab switch saves active tab selection');
+
+      // Test 18: Autosave on file type/language change
+      w.__textgerbil.selectTab(switchSourceId);
+      doc.getElementById('modeSelect').value = 'text';
+      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.getElementById('languageSelect').value = 'python';
+      const writesBeforeLanguage = getWriteCount(STORAGE_KEY);
+      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      const languageSaved = getSavedState();
+      const langTab = languageSaved && languageSaved.tabs && languageSaved.tabs.find(x => x.id === switchSourceId);
+      assert(getWriteCount(STORAGE_KEY) > writesBeforeLanguage, 'Language change triggers autosave');
+      assert(langTab && langTab.language === 'python', 'Language change persisted');
+
+      // Test 18b: languageSelect specifically saves on each change
+      const writesBeforeLanguageSecond = getWriteCount(STORAGE_KEY);
+      doc.getElementById('languageSelect').value = 'markdown';
+      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      const languageSavedSecond = getSavedState();
+      const langTabSecond = languageSavedSecond && languageSavedSecond.tabs && languageSavedSecond.tabs.find(x => x.id === switchSourceId);
+      assert(getWriteCount(STORAGE_KEY) > writesBeforeLanguageSecond, 'languageSelect change triggers save');
+      assert(langTabSecond && langTabSecond.language === 'markdown', 'languageSelect value persisted');
+
+      // Test 19: Autosave on edit mode change (text -> rich)
+      doc.getElementById('modeSelect').value = 'rich';
+      const writesBeforeMode = getWriteCount(STORAGE_KEY);
+      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      const modeSaved = getSavedState();
+      const modeTab = modeSaved && modeSaved.tabs && modeSaved.tabs.find(x => x.id === switchSourceId);
+      assert(getWriteCount(STORAGE_KEY) > writesBeforeMode, 'Mode change triggers autosave');
+      assert(modeTab && modeTab.mode === 'rich', 'Mode change persisted');
+      doc.getElementById('modeSelect').value = 'text';
+      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+
+      // Test 20: Autosave on current-tab theme setting apply
+      doc.getElementById('fontFamily').value = 'Courier New';
+      doc.getElementById('fontSize').value = '18';
+      doc.getElementById('bgColor').value = '#101010';
+      doc.getElementById('fgColor').value = '#e0e0e0';
+      const writesBeforeTheme = getWriteCount(STORAGE_KEY);
+      doc.getElementById('applyTheme').click();
+      const themeSaved = getSavedState();
+      const themeTab = themeSaved && themeSaved.tabs && themeSaved.tabs.find(x => x.id === switchSourceId);
+      assert(getWriteCount(STORAGE_KEY) > writesBeforeTheme, 'Apply theme triggers autosave');
+      assert(themeTab && themeTab.theme && themeTab.theme.fontFamily === 'Courier New', 'Current-tab theme persisted');
+
+      // Test 21: Autosave on global settings apply
+      doc.getElementById('fontFamily').value = 'serif';
+      doc.getElementById('fontSize').value = '15';
+      const writesBeforeGlobalTabs = getWriteCount(STORAGE_KEY);
+      const writesBeforeGlobalTheme = getWriteCount(STORAGE_GLOBAL);
+      doc.getElementById('applyGlobal').click();
+      assert(getWriteCount(STORAGE_KEY) > writesBeforeGlobalTabs, 'Apply global triggers tab-state autosave');
+      assert(getWriteCount(STORAGE_GLOBAL) > writesBeforeGlobalTheme, 'Apply global triggers global-theme autosave');
+
+      // Test 22: Autosave on rename tab (Enter)
+      const tabBeforeRename = doc.querySelector('.tab');
+      if (tabBeforeRename) {
+        const renameWritesBefore = getWriteCount(STORAGE_KEY);
+        const renameTitle = tabBeforeRename.querySelector('span:first-child');
+        if (renameTitle) {
+          renameTitle.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+          const renameInput = tabBeforeRename.querySelector('input');
+          if (renameInput) {
+            renameInput.value = 'Renamed via Enter';
+            renameInput.dispatchEvent(new w.KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+          }
+        }
+        assert(getWriteCount(STORAGE_KEY) > renameWritesBefore, 'Rename via Enter triggers autosave');
+      }
+
+      // Test 23: Autosave on rename tab (blur)
+      const tabBeforeBlurRename = doc.querySelector('.tab');
+      if (tabBeforeBlurRename) {
+        const renameWritesBeforeBlur = getWriteCount(STORAGE_KEY);
+        const renameTitleBlur = tabBeforeBlurRename.querySelector('span:first-child');
+        if (renameTitleBlur) {
+          renameTitleBlur.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+          const renameInputBlur = tabBeforeBlurRename.querySelector('input');
+          if (renameInputBlur) {
+            renameInputBlur.value = 'Renamed via Blur';
+            renameInputBlur.dispatchEvent(new w.FocusEvent('blur', { bubbles: true }));
+          }
+        }
+        assert(getWriteCount(STORAGE_KEY) > renameWritesBeforeBlur, 'Rename via blur triggers autosave');
+      }
+
+      // Test 24: Autosave on notepad edit
+      doc.getElementById('modeSelect').value = 'notepad';
+      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      const addNoteBtn = doc.getElementById('addNoteBtn');
+      addNoteBtn.click();
+      const noteForSave = doc.querySelector('#notesContainer textarea');
+      const writesBeforeNoteEdit = getWriteCount(STORAGE_KEY);
+      if (noteForSave) {
+        noteForSave.value = 'autosave note content';
+        noteForSave.dispatchEvent(new w.Event('input'));
+      }
+      assert(getWriteCount(STORAGE_KEY) > writesBeforeNoteEdit, 'Notepad edit triggers autosave');
+      doc.getElementById('modeSelect').value = 'text';
+      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+
+      // Test 25: Tab switching
       const tabs = doc.querySelectorAll('.tab');
       assert(tabs.length >= 1, `Tabs exist (found ${tabs.length})`);
       if (tabs.length >= 1) {
@@ -156,7 +284,7 @@ const { JSDOM } = require('jsdom');
         assert(true, 'Tab switched without error');
       }
 
-      // Test 18: Preview defaults off and is remembered per tab
+      // Test 26: Preview defaults off and is remembered per tab
       const previewSidebar = doc.getElementById('preview');
       w.__textgerbil.newTab('text');
       const firstPreviewTab = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
@@ -171,20 +299,20 @@ const { JSDOM } = require('jsdom');
       assert(secondPreviewTab.previewVisible === false, 'Second tab stores preview as hidden');
       assert(firstPreviewTab.previewVisible === true, 'First tab remembers preview visibility');
 
-      // Test 19: Export function
+      // Test 27: Export function
       assert(typeof w.__textgerbil.exportCurrent === 'function', 'Export function exposed');
 
-      // Test 20: Global state accessible
+      // Test 28: Global state accessible
       assert(Array.isArray(w.__textgerbil.tabs), 'Tabs array accessible');
       assert(typeof w.__textgerbil.save === 'function', 'Save function accessible');
       assert(typeof w.__textgerbil.load === 'function', 'Load function accessible');
 
-      // Test 21: Keyboard shortcut simulation
+      // Test 29: Keyboard shortcut simulation
       const keydownEvent = new w.KeyboardEvent('keydown', { key: 't', ctrlKey: true });
       doc.dispatchEvent(keydownEvent);
       assert(true, 'Keyboard shortcut handler runs without error');
 
-      // Test 22: Rename tab (via UI double-click)
+      // Test 30: Rename tab (via UI double-click)
       const firstTab = doc.querySelector('.tab');
       if (firstTab) {
         const titleSpan = firstTab.querySelector('span:first-child');
@@ -217,7 +345,7 @@ const { JSDOM } = require('jsdom');
       }
       const editorsBefore = Object.keys(w.__textgerbil.editors).length;
 
-      // Test 24: Close tab via UI button
+      // Test 31: Close tab via UI button
       const closeBtn = doc.querySelector('.tab .close');
       if (closeBtn) {
         closeBtn.click();
