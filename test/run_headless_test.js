@@ -63,6 +63,8 @@ const { JSDOM } = require('jsdom');
     try {
       const doc = dom.window.document;
       const w = dom.window;
+      const DEFAULT_PREVIEW_WIDTH = 360;
+      const MIN_PREVIEW_WIDTH = 260;
       const STORAGE_KEY = 'textgerbil_v1_tabs';
       const STORAGE_GLOBAL = 'textgerbil_v1_global';
       const getSavedState = () => {
@@ -331,15 +333,23 @@ const { JSDOM } = require('jsdom');
       w.__textgerbil.newTab('text');
       const firstPreviewTab = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
       assert(firstPreviewTab.previewVisible === false, 'First tab stores preview hidden by default');
+      assert(firstPreviewTab.previewWidth === DEFAULT_PREVIEW_WIDTH, 'First tab stores default preview width');
       assert(previewSidebar.classList.contains('hidden'), 'Preview is hidden by default');
       firstPreviewTab.previewVisible = true;
+      firstPreviewTab.previewWidth = 420;
       w.__textgerbil.save();
 
       w.__textgerbil.newTab('text');
       const secondPreviewTab = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
       assert(previewSidebar.classList.contains('hidden'), 'Second tab keeps preview hidden by default');
       assert(secondPreviewTab.previewVisible === false, 'Second tab stores preview as hidden');
+      assert(secondPreviewTab.previewWidth === DEFAULT_PREVIEW_WIDTH, 'Second tab starts with default preview width');
       assert(firstPreviewTab.previewVisible === true, 'First tab remembers preview visibility');
+      secondPreviewTab.previewWidth = 300;
+      w.__textgerbil.selectTab(firstPreviewTab.id);
+      assert(w.__textgerbil.getActiveTabPreviewWidth() === 420, 'Tab A remembers custom preview width');
+      w.__textgerbil.selectTab(secondPreviewTab.id);
+      assert(w.__textgerbil.getActiveTabPreviewWidth() === 300, 'Tab B remembers custom preview width');
 
       // Test 27: Export function
       assert(typeof w.__textgerbil.exportCurrent === 'function', 'Export function exposed');
@@ -413,7 +423,8 @@ const { JSDOM } = require('jsdom');
                 language: 'markdown',
                 content: '# Alpha',
                 theme: { fontFamily: 'serif', fontSize: 13, bg: '#fafafa', fg: '#111111' },
-                previewVisible: true
+                previewVisible: true,
+                previewWidth: 480
               },
               {
                 id: 'tab-beta',
@@ -421,7 +432,8 @@ const { JSDOM } = require('jsdom');
                 mode: 'notepad',
                 content: JSON.stringify([{ id: 'n1', text: 'todo 1' }, { id: 'n2', text: 'todo 2' }]),
                 theme: { fontFamily: 'monospace', fontSize: 16, bg: '#101010', fg: '#f0f0f0' },
-                previewVisible: false
+                previewVisible: false,
+                previewWidth: 300
               }
             ],
             activeId: 'tab-beta'
@@ -436,7 +448,11 @@ const { JSDOM } = require('jsdom');
           assert(sdoc.querySelectorAll('#notesContainer textarea').length === 2, 'Init from storage restores notepad notes');
           const restoredActive = sw.__textgerbil.tabs.find(x => x.id === 'tab-beta');
           assert(restoredActive && restoredActive.theme && restoredActive.theme.fontFamily === 'monospace', 'Init keeps per-tab theme from storage');
+          assert(restoredActive && restoredActive.previewWidth === 300, 'Init restores per-tab preview width from storage');
           assert(sdoc.getElementById('notesContainer').style.fontFamily === 'monospace', 'Init applies restored active tab theme');
+          sw.__textgerbil.selectTab('tab-alpha');
+          const restoredPreview = sdoc.getElementById('preview');
+          assert(restoredPreview && restoredPreview.style.width === '480px', 'Selecting stored tab applies saved preview width style');
         }
       );
 
@@ -481,6 +497,7 @@ const { JSDOM } = require('jsdom');
         (sw, sdoc) => {
           const restored = sw.__textgerbil.tabs.find(x => x.id === 'script-tab');
           assert(restored && restored.previewVisible === false, 'Init sets missing previewVisible to false');
+          assert(restored && restored.previewWidth === DEFAULT_PREVIEW_WIDTH, 'Init sets missing previewWidth to default');
           assert(restored && restored.language === 'javascript', 'Init infers missing language for active text tab');
           assert(sdoc.getElementById('languageSelect').value === 'javascript', 'Init syncs inferred language to selector');
         }
@@ -599,6 +616,10 @@ const { JSDOM } = require('jsdom');
       doc.getElementById('modeSelect').value = 'text';
       doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
       w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: true, supportsSandbox: true });
+      const mainLayout = doc.querySelector('main');
+      if (mainLayout) {
+        mainLayout.getBoundingClientRect = () => ({ left: 0, top: 0, right: 1000, bottom: 700, width: 1000, height: 700 });
+      }
       w.__textgerbil.setMarkdownRendererForTest({
         render(input) {
           const safe = String(input || '')
@@ -660,6 +681,15 @@ const { JSDOM } = require('jsdom');
       );
       w.__textgerbil.setPreviewSupportOverride(null);
       w.__textgerbil.updatePreview();
+
+      w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: true, supportsSandbox: true });
+      doc.getElementById('languageSelect').value = 'markdown';
+      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+      w.__textgerbil.setActiveTabPreviewWidth(100);
+      assert(w.__textgerbil.getActiveTabPreviewWidth() === MIN_PREVIEW_WIDTH, 'Preview width clamps to minimum bound');
+      w.__textgerbil.setActiveTabPreviewWidth(900);
+      assert(w.__textgerbil.getActiveTabPreviewWidth() === 672, 'Preview width clamps to preserve minimum editor width');
+      assert(previewPanel.style.width === '672px', 'Clamped preview width is applied to preview panel style');
 
       doc.getElementById('languageSelect').value = 'json';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));

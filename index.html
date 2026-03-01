@@ -56,10 +56,13 @@
     .small:disabled{opacity:.45;color:#64748b;background:#f1f5f9;border-color:#e2e8f0;cursor:not-allowed;filter:saturate(.35)}
     .small:disabled:hover{background:#f1f5f9}
     .icon{width:14px;height:14px;display:inline-block}
+    #previewResizeHandle{width:12px;cursor:col-resize;position:relative;touch-action:none}
+    #previewResizeHandle::before{content:'';position:absolute;left:5px;top:8px;bottom:8px;width:2px;border-radius:2px;background:#cbd5e1}
+    #previewResizeHandle:hover::before{background:#2b8be6}
   </style>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
-  <div class="app min-h-screen flex flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-sky-100">
+<body class="h-screen bg-slate-100 text-slate-900">
+  <div class="app h-full flex flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-sky-100">
     <header class="border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur">
       <div class="flex items-center gap-3">
       <h1 class="m-0 text-base font-semibold tracking-tight">TextGerbil</h1>
@@ -70,8 +73,8 @@
       </div>
     </header>
 
-    <main class="flex flex-1 overflow-hidden p-3">
-      <section class="editor-area flex flex-1 flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+    <main class="flex h-full min-h-0 flex-1 overflow-auto p-3">
+      <section class="editor-area flex h-full min-w-0 flex-1 flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <div class="flex flex-wrap items-center gap-2">
           <div id="tabTitle" class="font-semibold text-slate-800"></div>
           <div class="toolbar ml-auto flex flex-wrap items-center gap-2">
@@ -103,7 +106,7 @@
           <div class="text-sm text-slate-600"><button id="themeBtn" class="small" aria-label="Settings" title="Settings"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
           <input type="file" id="importFile" class="hidden" accept="*/*" aria-hidden="true" />
         </div>
-        <div class="editor flex flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div class="editor flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div id="textEditor" class="editor-instance active"></div>
           <div id="richEditor" class="editor-instance"></div>
           <div id="notepadEditor" class="editor-instance flex-col gap-2 overflow-auto p-2">
@@ -123,9 +126,10 @@
         </div>
       </section>
 
-      <aside class="sidebar hidden ml-3 flex w-[360px] flex-col gap-2 overflow-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm" id="preview">
+      <div id="previewResizeHandle" class="hidden ml-2 mr-1 shrink-0 rounded" role="separator" aria-orientation="vertical" aria-label="Resize preview pane"></div>
+      <aside class="sidebar hidden h-full min-h-0 self-stretch flex w-[360px] shrink-0 flex-col gap-2 overflow-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm" id="preview">
         <div class="font-bold text-slate-800">Preview</div>
-        <div id="previewContent" class="flex-1 overflow-auto pt-1 text-slate-700"></div>
+        <div id="previewContent" class="flex min-h-0 flex-1 overflow-auto pt-1 text-slate-700"></div>
       </aside>
     </main>
   </div>
@@ -139,6 +143,9 @@
     let editors = {} // store editor instances: {tabId: {cm, quill, ...}}
     let md = null // markdown-it instance
     let previewSupportOverride = null
+    const DEFAULT_PREVIEW_WIDTH = 360
+    const MIN_PREVIEW_WIDTH = 260
+    const MIN_EDITOR_WIDTH = 320
     const SECURE_PREVIEW_UNAVAILABLE_MESSAGE = 'This browser does not support the required iframe security features (sandbox + srcdoc). HTML/Markdown preview is disabled to protect your data.'
     // data for notepad: each tab will have notepadData = [{id,text},...]
     // cursor state: stored per-tab under .cursor
@@ -185,8 +192,9 @@
     function buildSandboxedPreviewIframe(htmlBody){
       const iframe=document.createElement('iframe');
       iframe.style.width='100%';
-      iframe.style.height='80vh';
+      iframe.style.height='100%';
       iframe.style.border='0';
+      iframe.setAttribute('scrolling', 'yes');
       iframe.setAttribute('sandbox','');
       iframe.referrerPolicy='no-referrer';
       iframe.srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; font-src data:; connect-src \'none\'; media-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'; frame-ancestors \'none\'"><style>html,body{margin:0;padding:10px;color:#0f172a;background:#fff;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;line-height:1.5}pre{white-space:pre-wrap;word-break:break-word}</style></head><body>'+htmlBody+'</body></html>';
@@ -204,6 +212,26 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({tabs,activeId}));
       if(globalTheme) localStorage.setItem(STORAGE_GLOBAL, JSON.stringify(globalTheme));
     }
+
+    function clampPreviewWidthForTab(tab, width){
+      const base = Number(width);
+      const minClamped = Number.isFinite(base) ? Math.max(MIN_PREVIEW_WIDTH, Math.round(base)) : DEFAULT_PREVIEW_WIDTH;
+      const main = document.querySelector('main');
+      if(!main || !tab || tab.mode!=='text' || !canTabPreview(tab)) return minClamped;
+      const mainRect = main.getBoundingClientRect();
+      const maxByEditor = Math.max(MIN_PREVIEW_WIDTH, Math.floor(mainRect.width - MIN_EDITOR_WIDTH - 8));
+      return Math.min(minClamped, maxByEditor);
+    }
+
+    function applyPreviewWidth(tab){
+      const preview = document.getElementById('preview');
+      if(!preview || !tab) return;
+      const width = clampPreviewWidthForTab(tab, tab.previewWidth);
+      tab.previewWidth = width;
+      preview.style.flex = '0 0 auto';
+      preview.style.width = width+'px';
+    }
+
     function load(){
       const v=localStorage.getItem(STORAGE_KEY);
       if(v){
@@ -246,7 +274,7 @@
       closeSpan.onclick=(e)=>{e.stopPropagation();try{closeTab(t.id);}catch(err){console.error('closeTab error',err);}};
       d.appendChild(closeSpan);d.onclick=(e)=>{if(e.detail===1)selectTab(t.id)};el.appendChild(d)})}
 
-    function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Untitled',mode:'text',language:'plain',content:'',theme:{},previewVisible:false});activeId=tabs[0].id}}
+    function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Untitled',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH});activeId=tabs[0].id}}
 
     function normalizeLoadedTab(rawTab){
       if(!rawTab || typeof rawTab!=='object') return null;
@@ -262,6 +290,8 @@
         tab.language = tab.language || 'plain';
       }
       if(typeof tab.previewVisible!=='boolean') tab.previewVisible=false;
+      const parsedPreviewWidth = Number(tab.previewWidth);
+      tab.previewWidth = Number.isFinite(parsedPreviewWidth) ? Math.max(MIN_PREVIEW_WIDTH, Math.round(parsedPreviewWidth)) : DEFAULT_PREVIEW_WIDTH;
       return tab;
     }
 
@@ -276,6 +306,7 @@
         if(!t.language) t.language = detectLanguageFromTitle(t.title);
         document.getElementById('languageSelect').value=t.language;
       }
+      applyPreviewWidth(t);
       switchEditorMode(t.mode, id);
       setEditorContent(t.content||'');
       applyThemeToEditor(t.theme);
@@ -325,7 +356,7 @@
 
     function newTab(mode='text'){
       saveCurrentEditor();
-      const t={id:uid(),title:'Untitled',mode,language:'plain',content:'',theme:{},previewVisible:false};
+      const t={id:uid(),title:'Untitled',mode,language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
       if(mode==='notepad') t.notepadData=[];
       if(globalTheme){t.theme=Object.assign({},globalTheme);} // inherit global
       tabs.push(t);
@@ -580,10 +611,53 @@
 
     function applyPreviewVisibility(tab){
       const preview = document.getElementById('preview');
-      if(!preview) return;
+      const handle = document.getElementById('previewResizeHandle');
+      if(!preview || !handle) return;
       const canPreview = canTabPreview(tab);
       const shouldShow = !!canPreview && !!tab.previewVisible;
+      if(tab) applyPreviewWidth(tab);
       preview.classList.toggle('hidden', !shouldShow);
+      handle.classList.toggle('hidden', !shouldShow);
+    }
+
+    function initPreviewResize(){
+      const handle = document.getElementById('previewResizeHandle');
+      const main = document.querySelector('main');
+      if(!handle || !main) return;
+      let dragging = false;
+      let pointerId = null;
+
+      const stopDragging = ()=>{
+        dragging = false;
+        pointerId = null;
+      };
+
+      handle.addEventListener('pointerdown', (ev)=>{
+        if(ev.button !== 0) return;
+        const t=tabs.find(x=>x.id===activeId);
+        const preview=document.getElementById('preview');
+        if(!t || !canTabPreview(t) || !preview || preview.classList.contains('hidden')) return;
+        dragging = true;
+        pointerId = ev.pointerId;
+        if(typeof handle.setPointerCapture==='function'){
+          try{handle.setPointerCapture(pointerId);}catch(e){/* ignore capture errors */}
+        }
+        ev.preventDefault();
+      });
+
+      handle.addEventListener('pointermove', (ev)=>{
+        if(!dragging || (pointerId!==null && ev.pointerId!==pointerId)) return;
+        const t=tabs.find(x=>x.id===activeId);
+        if(!t || !canTabPreview(t)) return;
+        const mainRect = main.getBoundingClientRect();
+        const desiredWidth = mainRect.right - ev.clientX;
+        t.previewWidth = clampPreviewWidthForTab(t, desiredWidth);
+        applyPreviewWidth(t);
+        save();
+      });
+
+      handle.addEventListener('pointerup', stopDragging);
+      handle.addEventListener('pointercancel', stopDragging);
     }
 
     function canTabPreview(tab){
@@ -740,6 +814,7 @@
     ensureAtLeastOne();
     if(!tabs.find(x=>x.id===activeId)) activeId=tabs[0].id;
     initMarkdownIt();
+    initPreviewResize();
     renderTabs();
     selectTab(activeId);
     syncPreviewToggleState();
@@ -763,7 +838,7 @@
         const text=reader.result;
         // open in new tab
         const newId=uid();
-        const t={id:newId,title:file.name,mode:'plain',content:text,theme:{},previewVisible:false};
+        const t={id:newId,title:file.name,mode:'plain',content:text,theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
         if(globalTheme) t.theme=Object.assign({},globalTheme);
         tabs.push(t);
         activeId=newId;
@@ -805,7 +880,18 @@
       getPreviewSupport,
       canUseSecureIframePreview,
       setPreviewSupportOverride:(override)=>{previewSupportOverride=override||null; syncPreviewToggleState(); updatePreview();},
-      setMarkdownRendererForTest:(renderer)=>{md=renderer||null; updatePreview();}
+      setMarkdownRendererForTest:(renderer)=>{md=renderer||null; updatePreview();},
+      getActiveTabPreviewWidth:()=>{
+        const t=tabs.find(x=>x.id===activeId);
+        return t ? t.previewWidth : null;
+      },
+      setActiveTabPreviewWidth:(width)=>{
+        const t=tabs.find(x=>x.id===activeId);
+        if(!t) return;
+        t.previewWidth = clampPreviewWidthForTab(t, width);
+        applyPreviewWidth(t);
+        save();
+      }
     }
   </script>
 </body>

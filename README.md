@@ -16,9 +16,10 @@ Live demo: https://angusdev.github.io/textgerbil
   - Notepad (multiple short notes in one tab)
 - Themes (font family, size, background/foreground) per-tab or globally
 - Live preview for Markdown and HTML text tabs in a strict sandboxed iframe, plus JSON when the JSON formatter library is available (preview button is disabled otherwise)
+- Draggable preview pane width, stored per tab
 - Import and export files
 - Keyboard shortcuts (desktop style)
-- State persistence: tabs, contents, preview visibility, cursor/selection, themes
+- State persistence: tabs, contents, preview visibility, preview width, cursor/selection, themes
 - Runs entirely in one `index.html` file using CDN libraries
 
 > External libraries are loaded via `<script>` tags from CDNs – you

@@ -41,6 +41,7 @@ Each tab object has the following shape:
     fg?: string
   },
   previewVisible: boolean, // per-tab preview visibility state
+  previewWidth: number, // per-tab preview sidebar width in px
   cursor?: any,        // mode-specific cursor/selection state
   notepadData?: Array, // used when mode === 'notepad'
 }
@@ -93,6 +94,9 @@ Mode switching shows/hides the appropriate `.editor-instance` div. The preview
 toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure
 iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` +
 `iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available.
+Preview width is resizable via a drag handle and stored per tab. The width has
+no fixed hard max, but is dynamically clamped so the editor retains a minimum
+usable width.
 
 ### Preview Security Model
 
