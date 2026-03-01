@@ -31,17 +31,17 @@ Live demo: https://angusdev.github.io/textgerbil
 
 1. Download or clone the repository and open `index.html` in any modern
    browser (Chrome, Firefox, Edge, Safari).
-2. The first tab appears automatically; use the **+ New** button or
+2. The first tab appears automatically; use the **New tab** button (plus icon) or
    `Ctrl/Cmd+T` to create additional tabs.
 3. Change the editor mode (Text editing, Rich Text, or Notepad) using the dropdown.
-4. Toggle the preview sidebar with the **Preview** button (enabled only for Text mode with Markdown, HTML, or JSON language selected).
+4. Toggle the preview sidebar with the **Preview** button (eye icon) (enabled only for Text mode with Markdown, HTML, or JSON language selected).
 5. Edit text – changes are saved automatically in local storage.
 6. **Rename a tab** by double-clicking its title to edit inline. Press Enter
    or click elsewhere to confirm.
-7. Use the **Export** button or `Ctrl/Cmd+S` to save the current tab to a
-   `.txt` file. Use **Import** or `Ctrl/Cmd+O` to open a local file in a new
+7. Use the **Export** button (download icon) or `Ctrl/Cmd+S` to save the current tab to a
+   `.txt` file. Use the **Import** button (upload icon) or `Ctrl/Cmd+O` to open a local file in a new
    tab.
-8. Click the theme button to adjust fonts and colors; you can apply the
+8. Click the **Settings** button (gear icon) to adjust fonts and colors; you can apply the
    style to the current tab or globally.
 9. Close tabs with the `×` icon or `Ctrl/Cmd+W`.
 

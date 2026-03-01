@@ -14,8 +14,8 @@ JSON formatter library is available.
 
 ## High-Level Architecture
 
-- **HTML structure**: A header with tabs and toolbar, a main content area
-  with an editor container and an optional preview sidebar, and a settings
+- **HTML structure**: A header with tabs, a main content area
+  with a toolbar and an editor container, an optional preview sidebar, and a settings
   pane at the bottom of the editor area.
 - **CSS**: Minimal inline styles define layout, themes, and responsiveness.
 - **JavaScript**: All logic is contained in a single `<script>` block. State
