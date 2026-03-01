@@ -709,6 +709,29 @@ const { JSDOM } = require('jsdom');
         assert(previewToggle.disabled === true, 'Preview button disabled for JSON when formatter is unavailable');
       }
 
+      // Test 41: Preview CSP validation
+      w.__textgerbil.selectTab(previewTabId);
+      w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: true, supportsSandbox: true });
+      
+      const checkCSP = (lang) => {
+        doc.getElementById('languageSelect').value = lang;
+        doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+        if (!w.__textgerbil.tabs.find(x => x.id === previewTabId).previewVisible) {
+          doc.getElementById('togglePreview').click();
+        }
+        w.__textgerbil.updatePreview();
+        const iframe = doc.getElementById('previewContent').querySelector('iframe');
+        assert(!!iframe, `Preview iframe created for ${lang}`);
+        if (iframe) {
+          const srcdoc = iframe.getAttribute('srcdoc') || '';
+          assert(!srcdoc.includes('frame-ancestors'), `CSP for ${lang} does not contain ignored 'frame-ancestors' directive`);
+        }
+      };
+
+      checkCSP('markdown');
+      checkCSP('htmlmixed');
+      checkCSP('json');
+
     } catch (e) {
       console.error('test error', e);
       testsFailed++;
