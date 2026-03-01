@@ -178,6 +178,8 @@ Expected output: `Failed: 0`
 
 ## Modification Guidelines for AI
 
+**Important for AI Assistants:** Always run `npm run lint:fix` after modifying the code and ensure all linting issues are resolved.
+
 1. **Read the spec**: Use this document to understand state shapes and
    function responsibilities.
 2. **Avoid reordering or rewriting structure**: keep `index.html` as one file

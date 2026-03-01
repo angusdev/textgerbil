@@ -4,7 +4,9 @@
   "description": "Single-file browser text editor with multi-tab modes and headless tests.",
   "main": "index.html",
   "scripts": {
-    "test": "node test/run_headless_test.js"
+    "test": "node test/run_headless_test.js",
+    "lint": "eslint index.html",
+    "lint:fix": "eslint index.html --fix"
   },
   "engines": {
     "node": ">=24 <25"
@@ -19,5 +21,10 @@
     "quill",
     "vanilla-js"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.2",
+    "eslint-plugin-html": "^8.1.4"
+  }
 }

@@ -23,7 +23,7 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    if (window.tailwind) {
+    if(window.tailwind){
       tailwind.config = {
         theme: {
           extend: {
@@ -154,17 +154,17 @@
     function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 
     function initMarkdownIt(){
-      if(!md && window.markdownit) md = window.markdownit('commonmark', {html: false, breaks: true})
+      if(!md && window.markdownit) md = window.markdownit('commonmark',{html: false,breaks: true})
       return md
     }
 
     function getPreviewSupport(){
-      if(previewSupportOverride) return previewSupportOverride
+      if(previewSupportOverride)return previewSupportOverride
       const supportsIframe = typeof HTMLIFrameElement !== 'undefined'
       const iframe = document.createElement('iframe')
       const supportsSrcdoc = 'srcdoc' in iframe
       const supportsSandbox = 'sandbox' in iframe
-      return {supportsIframe, supportsSrcdoc, supportsSandbox}
+      return{supportsIframe,supportsSrcdoc,supportsSandbox}
     }
 
     function canUseSecureIframePreview(){
@@ -172,9 +172,9 @@
       return support.supportsIframe && support.supportsSrcdoc && support.supportsSandbox
     }
 
-    function renderPreviewError(message, details){
+    function renderPreviewError(message,details){
       const pv=document.getElementById('previewContent');
-      if(!pv) return;
+      if(!pv)return;
       pv.textContent='';
       const box=document.createElement('div');
       box.className='rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900';
@@ -194,7 +194,7 @@
       iframe.style.width='100%';
       iframe.style.height='100%';
       iframe.style.border='0';
-      iframe.setAttribute('scrolling', 'yes');
+      iframe.setAttribute('scrolling','yes');
       iframe.setAttribute('sandbox','');
       iframe.referrerPolicy='no-referrer';
       iframe.srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; font-src data:; connect-src \'none\'; media-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'; frame-ancestors \'none\'"><style>html,body{margin:0;padding:10px;color:#0f172a;background:#fff;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;line-height:1.5}pre{white-space:pre-wrap;word-break:break-word}</style></head><body>'+htmlBody+'</body></html>';
@@ -202,31 +202,31 @@
     }
 
     function detectLanguageFromTitle(title){
-      if(!title) return 'plain';
+      if(!title)return'plain';
       const ext = title.split('.').pop().toLowerCase();
       const map = {'js':'javascript','py':'python','md':'markdown','html':'htmlmixed','htm':'htmlmixed','css':'css','json':'json','sql':'sql','ts':'javascript','jsx':'javascript','tsx':'htmlmixed'};
       return map[ext] || 'plain';
     }
 
     function save(){
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({tabs,activeId}));
-      if(globalTheme) localStorage.setItem(STORAGE_GLOBAL, JSON.stringify(globalTheme));
+      localStorage.setItem(STORAGE_KEY,JSON.stringify({tabs,activeId}));
+      if(globalTheme) localStorage.setItem(STORAGE_GLOBAL,JSON.stringify(globalTheme));
     }
 
-    function clampPreviewWidthForTab(tab, width){
+    function clampPreviewWidthForTab(tab,width){
       const base = Number(width);
-      const minClamped = Number.isFinite(base) ? Math.max(MIN_PREVIEW_WIDTH, Math.round(base)) : DEFAULT_PREVIEW_WIDTH;
+      const minClamped = Number.isFinite(base) ? Math.max(MIN_PREVIEW_WIDTH,Math.round(base)) : DEFAULT_PREVIEW_WIDTH;
       const main = document.querySelector('main');
-      if(!main || !tab || tab.mode!=='text' || !canTabPreview(tab)) return minClamped;
+      if(!main || !tab || tab.mode!=='text' || !canTabPreview(tab))return minClamped;
       const mainRect = main.getBoundingClientRect();
-      const maxByEditor = Math.max(MIN_PREVIEW_WIDTH, Math.floor(mainRect.width - MIN_EDITOR_WIDTH - 8));
-      return Math.min(minClamped, maxByEditor);
+      const maxByEditor = Math.max(MIN_PREVIEW_WIDTH,Math.floor(mainRect.width - MIN_EDITOR_WIDTH - 8));
+      return Math.min(minClamped,maxByEditor);
     }
 
     function applyPreviewWidth(tab){
       const preview = document.getElementById('preview');
-      if(!preview || !tab) return;
-      const width = clampPreviewWidthForTab(tab, tab.previewWidth);
+      if(!preview || !tab)return;
+      const width = clampPreviewWidthForTab(tab,tab.previewWidth);
       tab.previewWidth = width;
       preview.style.flex = '0 0 auto';
       preview.style.width = width+'px';
@@ -235,25 +235,25 @@
     function load(){
       const v=localStorage.getItem(STORAGE_KEY);
       if(v){
-        try{const s=JSON.parse(v);tabs=s.tabs||[];activeId=s.activeId;}catch(e){/*ignore*/}
+        try {const s=JSON.parse(v);tabs=s.tabs||[];activeId=s.activeId;}catch {/*ignore*/}
       }
       const g=localStorage.getItem(STORAGE_GLOBAL);
-      if(g){try{globalTheme=JSON.parse(g);}catch(e){globalTheme=null}}
+      if(g){try {globalTheme=JSON.parse(g);}catch {globalTheme=null}}
       return true;
     }
 
-    function renameTab(tabId, newTitle){
+    function renameTab(tabId,newTitle){
       const t=tabs.find(x=>x.id===tabId);
-      if(!t) return;
+      if(!t)return;
       t.title=(newTitle||'').trim()||'Untitled';
       save();
       renderTabs();
       if(activeId===tabId) document.getElementById('tabTitle').textContent=t.title;
     }
 
-    function enableTabRename(tabEl, tabId){
+    function enableTabRename(tabEl,tabId){
       const titleSpan=tabEl.querySelector('span:first-child');
-      if(!titleSpan) return;
+      if(!titleSpan)return;
       const oldTitle=titleSpan.textContent;
       const input=document.createElement('input');
       input.type='text';
@@ -264,21 +264,21 @@
       input.select();
       const confirmRename=()=>{
         const newTitle=input.value;
-        renameTab(tabId, newTitle);
+        renameTab(tabId,newTitle);
       };
       input.onkeypress=(e)=>{if(e.key==='Enter'){confirmRename();e.preventDefault();}};
       input.onblur=confirmRename;
     }
 
     function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');const base='tab group inline-flex min-w-0 flex-initial cursor-pointer select-none items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';d.className=base+state;const titleSpan=document.createElement('span');titleSpan.className='min-w-0 truncate';titleSpan.textContent=t.title||'Untitled';titleSpan.ondblclick=(e)=>{e.stopPropagation();enableTabRename(d,t.id)};d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close shrink-0 text-slate-400 hover:text-rose-500';closeSpan.textContent='×';closeSpan.title='Close';
-      closeSpan.onclick=(e)=>{e.stopPropagation();try{closeTab(t.id);}catch(err){console.error('closeTab error',err);}};
+      closeSpan.onclick=(e)=>{e.stopPropagation();try {closeTab(t.id);}catch (err){console.error('closeTab error',err);}};
       d.appendChild(closeSpan);d.onclick=(e)=>{if(e.detail===1)selectTab(t.id)};el.appendChild(d)})}
 
     function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Untitled',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH});activeId=tabs[0].id}}
 
     function normalizeLoadedTab(rawTab){
-      if(!rawTab || typeof rawTab!=='object') return null;
-      const tab = Object.assign({}, rawTab);
+      if(!rawTab || typeof rawTab!=='object')return null;
+      const tab = Object.assign({},rawTab);
       tab.id = tab.id || uid();
       tab.title = (tab.title||'Untitled').toString();
       tab.mode = ['text','rich','notepad'].includes(tab.mode) ? tab.mode : 'text';
@@ -286,18 +286,18 @@
       tab.theme = (tab.theme && typeof tab.theme==='object') ? tab.theme : {};
       if(tab.mode==='text'){
         tab.language = tab.language || detectLanguageFromTitle(tab.title) || 'plain';
-      } else {
+      }else {
         tab.language = tab.language || 'plain';
       }
       if(typeof tab.previewVisible!=='boolean') tab.previewVisible=false;
       const parsedPreviewWidth = Number(tab.previewWidth);
-      tab.previewWidth = Number.isFinite(parsedPreviewWidth) ? Math.max(MIN_PREVIEW_WIDTH, Math.round(parsedPreviewWidth)) : DEFAULT_PREVIEW_WIDTH;
+      tab.previewWidth = Number.isFinite(parsedPreviewWidth) ? Math.max(MIN_PREVIEW_WIDTH,Math.round(parsedPreviewWidth)) : DEFAULT_PREVIEW_WIDTH;
       return tab;
     }
 
     function selectTab(id){
       const t=tabs.find(x=>x.id===id);
-      if(!t) return;
+      if(!t)return;
       if(activeId && activeId!==id) saveCurrentEditor();
       activeId=id;
       document.getElementById('tabTitle').textContent=t.title;
@@ -307,7 +307,7 @@
         document.getElementById('languageSelect').value=t.language;
       }
       applyPreviewWidth(t);
-      switchEditorMode(t.mode, id);
+      switchEditorMode(t.mode,id);
       setEditorContent(t.content||'');
       applyThemeToEditor(t.theme);
       renderTabs();
@@ -318,7 +318,7 @@
     }
 
     function restoreCursorAndFocus(tab){
-      if(!tab) return;
+      if(!tab)return;
       if(tab.mode==='text'){
         const ed=editors[tab.id];
         if(ed && ed.cm){
@@ -336,16 +336,15 @@
         return;
       }
       if(tab.mode==='notepad'){
-        let area=null;
         if(tab.cursor){
-          area=document.querySelector(`#notesContainer textarea[data-note-id="${tab.cursor.noteId}"]`);
+          const area=document.querySelector(`#notesContainer textarea[data-note-id="${tab.cursor.noteId}"]`);
           if(area){
             area.focus();
             area.setSelectionRange(tab.cursor.start||0,tab.cursor.end||0);
             return;
           }
         }
-        area=document.querySelector('#notesContainer textarea');
+        const area=document.querySelector('#notesContainer textarea');
         if(area){
           area.focus();
           const end=area.value.length;
@@ -367,38 +366,38 @@
     }
 
     function closeTab(id){
-      const idx = tabs.findIndex(x => x.id === id);
-      if (idx === -1) return;
+      const idx = tabs.findIndex(x=>x.id === id);
+      if(idx === -1)return;
       // destroy any associated editor instance to prevent later errors
-      if (editors[id]) {
+      if(editors[id]){
         const ed = editors[id];
-        if (ed.cm && typeof ed.cm.toTextArea === 'function') {
-          try { ed.cm.toTextArea(); } catch (e) { /* ignore */ }
+        if(ed.cm && typeof ed.cm.toTextArea === 'function'){
+          try { ed.cm.toTextArea(); }catch { /* ignore */ }
         }
         // quill doesn't provide a destroy API; clearing reference
         delete editors[id];
       }
-      tabs.splice(idx, 1);
-      if (activeId === id) {
+      tabs.splice(idx,1);
+      if(activeId === id){
         // pick next tab to the right, or previous one
-        if (tabs[idx]) activeId = tabs[idx].id;
-        else if (tabs[idx - 1]) activeId = tabs[idx - 1].id;
+        if(tabs[idx]) activeId = tabs[idx].id;
+        else if(tabs[idx - 1]) activeId = tabs[idx - 1].id;
         else activeId = null;
       }
       ensureAtLeastOne();
       save();
       renderTabs();
-      if (activeId) selectTab(activeId);
+      if(activeId) selectTab(activeId);
     }
 
     function saveCurrentEditor(){
       const t=tabs.find(x=>x.id===activeId);
-      if(!t) return;
+      if(!t)return;
       t.content = getEditorContent();
       // save cursor/selection
       if(t.mode==='text'){
         const ed=editors[t.id]; if(ed && ed.cm && typeof ed.cm.getCursor==='function'){t.cursor=ed.cm.getCursor();}
-      } else if(t.mode==='notepad'){
+      }else if(t.mode==='notepad'){
         // store index and cursor position inside note
         const focused = document.querySelector('#notesContainer textarea:focus');
         if(focused){t.cursor={noteId:focused.dataset.noteId,start:focused.selectionStart,end:focused.selectionEnd};}
@@ -411,36 +410,36 @@
     function updatePreview(){
       const t=tabs.find(x=>x.id===activeId);
       const pv=document.getElementById('previewContent');
-      if(!t||!pv) return;
+      if(!t||!pv)return;
       pv.innerHTML='';
       if(t.mode==='text'){
         if(t.language==='markdown'){
           initMarkdownIt();
           if(md){
             if(!canUseSecureIframePreview()){
-              renderPreviewError('Secure preview unavailable', SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
-            } else {
+              renderPreviewError('Secure preview unavailable',SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
+            }else {
               const html=md.render(t.content||'');
               pv.appendChild(buildSandboxedPreviewIframe(html));
             }
-          }else{pv.textContent=t.content}
-        } else if(t.language==='htmlmixed'){
+          }else {pv.textContent=t.content}
+        }else if(t.language==='htmlmixed'){
           if(!canUseSecureIframePreview()){
-            renderPreviewError('Secure preview unavailable', SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
-          } else {
+            renderPreviewError('Secure preview unavailable',SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
+          }else {
             pv.appendChild(buildSandboxedPreviewIframe(t.content||''));
           }
-        } else if(t.language==='json'){
+        }else if(t.language==='json'){
           const raw=t.content||'';
-          try{
+          try {
             const parsed=JSON.parse(raw||'{}');
             if(window.JSONFormatter){
-              const formatter=new window.JSONFormatter(parsed, 1);
+              const formatter=new window.JSONFormatter(parsed,1);
               pv.appendChild(formatter.render());
-            } else {
+            }else {
               pv.textContent=raw;
             }
-          }catch(e){
+          }catch (e){
             const err=document.createElement('div');
             err.style.color='#b91c1c';
             err.style.marginBottom='8px';
@@ -452,10 +451,10 @@
             pv.appendChild(err);
             pv.appendChild(pre);
           }
-        } else {
+        }else {
           pv.textContent=t.content
         }
-      } else {
+      }else {
         pv.textContent=t.content
       }
     }
@@ -496,7 +495,7 @@
     }
     function removeNote(id){
       const t=tabs.find(x=>x.id===activeId);
-      if(!t.notepadData) return;
+      if(!t.notepadData)return;
       t.notepadData=t.notepadData.filter(n=>n.id!==id);
       save();
       renderNotepad();
@@ -504,20 +503,20 @@
 
     function getEditorContent(){
       const t=tabs.find(x=>x.id===activeId);
-      if(!t) return '';
+      if(!t)return'';
       const ed = editors[t.id] || {};
-      if(t.mode==='text' && ed.cm) return ed.cm.getValue();
-      if(t.mode==='rich' && ed.quill) return ed.quill.root.innerHTML;
-      if(t.mode==='notepad') {
+      if(t.mode==='text' && ed.cm)return ed.cm.getValue();
+      if(t.mode==='rich' && ed.quill)return ed.quill.root.innerHTML;
+      if(t.mode==='notepad'){
         // convert notes array to JSON
         return JSON.stringify(t.notepadData||[]);
       }
-      return '';
+      return'';
     }
 
     function setEditorContent(content){
       const t=tabs.find(x=>x.id===activeId);
-      if(!t) return;
+      if(!t)return;
       const ed = editors[t.id] = editors[t.id] || {};
       if(t.mode==='text'){
         if(!ed.cm) initCodeMirror(t.id);
@@ -528,7 +527,7 @@
         if(ed.quill) ed.quill.root.innerHTML=content||'';
       }
       if(t.mode==='notepad'){
-        try{t.notepadData = JSON.parse(content||'[]');}catch(e){t.notepadData=[];}
+        try {t.notepadData = JSON.parse(content||'[]');}catch {t.notepadData=[];}
         renderNotepad();
       }
     }
@@ -537,14 +536,14 @@
       const ed = editors[tabId] = editors[tabId] || {};
       if(ed.cm && typeof ed.cm.toTextArea === 'function') ed.cm.toTextArea();
       const t = tabs.find(x=>x.id===tabId);
-      if(!t) return;
+      if(!t)return;
       const lang = t.language || 'plain';
       const textEditorEl = document.getElementById('textEditor');
       textEditorEl.innerHTML='';
       // headless environment (tests) may set a flag to avoid CodeMirror's heavy logic
       if(window.__TEXTGERBIL_HEADLESS){
         let headlessCursor = t.cursor && typeof t.cursor.line==='number' && typeof t.cursor.ch==='number'
-          ? {line:t.cursor.line, ch:t.cursor.ch}
+          ? {line:t.cursor.line,ch:t.cursor.ch}
           : {line:0,ch:0};
         ed.cm = {
           getValue:()=>t.content||'',
@@ -563,7 +562,7 @@
         };
         return;
       }
-      ed.cm = CodeMirror(textEditorEl, {
+      ed.cm = CodeMirror(textEditorEl,{
         value: t.content||'',
         mode: lang,
         theme: 'monokai',
@@ -572,15 +571,15 @@
         indentUnit: 2
       });
       // guard against environments (like JSDOM) where getBoundingClientRect may be missing
-      if (ed.cm && ed.cm.display && ed.cm.display.wrapper) {
+      if(ed.cm && ed.cm.display && ed.cm.display.wrapper){
         const wrap = ed.cm.display.wrapper;
-        if (typeof wrap.getBoundingClientRect !== 'function') {
-          wrap.getBoundingClientRect = () => ({left:0,top:0,right:0,bottom:0,width:0,height:0});
+        if(typeof wrap.getBoundingClientRect !== 'function'){
+          wrap.getBoundingClientRect = ()=>({left:0,top:0,right:0,bottom:0,width:0,height:0});
         }
       }
-      ed.cm.on('change', ()=>{
+      ed.cm.on('change',()=>{
         const tab=tabs.find(x=>x.id===tabId);
-        if(tab) {tab.content=ed.cm.getValue(); save(); updatePreview()}
+        if(tab){tab.content=ed.cm.getValue(); save(); updatePreview()}
       });
     }
 
@@ -598,32 +597,32 @@
         };
         return;
       }
-      ed.quill = new Quill('#quill-root', {
+      ed.quill = new Quill('#quill-root',{
         theme: 'snow',
         placeholder: 'Start typing...',
-        modules: {toolbar: [[{header:[1,2,false]}], ['bold','italic','underline'], ['link','blockquote','code-block'], [{list:'ordered'},{list:'bullet'}]]}
+        modules: {toolbar: [[{header:[1,2,false]}],['bold','italic','underline'],['link','blockquote','code-block'],[{list:'ordered'},{list:'bullet'}]]}
       });
       if(t && t.content) ed.quill.root.innerHTML=t.content;
-      ed.quill.on('text-change', ()=>{
-        if(t) {t.content=ed.quill.root.innerHTML; save(); updatePreview()}
+      ed.quill.on('text-change',()=>{
+        if(t){t.content=ed.quill.root.innerHTML; save(); updatePreview()}
       });
     }
 
     function applyPreviewVisibility(tab){
       const preview = document.getElementById('preview');
       const handle = document.getElementById('previewResizeHandle');
-      if(!preview || !handle) return;
+      if(!preview || !handle)return;
       const canPreview = canTabPreview(tab);
       const shouldShow = !!canPreview && !!tab.previewVisible;
       if(tab) applyPreviewWidth(tab);
-      preview.classList.toggle('hidden', !shouldShow);
-      handle.classList.toggle('hidden', !shouldShow);
+      preview.classList.toggle('hidden',!shouldShow);
+      handle.classList.toggle('hidden',!shouldShow);
     }
 
     function initPreviewResize(){
       const handle = document.getElementById('previewResizeHandle');
       const main = document.querySelector('main');
-      if(!handle || !main) return;
+      if(!handle || !main)return;
       let dragging = false;
       let pointerId = null;
 
@@ -632,76 +631,76 @@
         pointerId = null;
       };
 
-      handle.addEventListener('pointerdown', (ev)=>{
-        if(ev.button !== 0) return;
+      handle.addEventListener('pointerdown',(ev)=>{
+        if(ev.button !== 0)return;
         const t=tabs.find(x=>x.id===activeId);
         const preview=document.getElementById('preview');
-        if(!t || !canTabPreview(t) || !preview || preview.classList.contains('hidden')) return;
+        if(!t || !canTabPreview(t) || !preview || preview.classList.contains('hidden'))return;
         dragging = true;
         pointerId = ev.pointerId;
         if(typeof handle.setPointerCapture==='function'){
-          try{handle.setPointerCapture(pointerId);}catch(e){/* ignore capture errors */}
+          try {handle.setPointerCapture(pointerId);}catch {/* ignore capture errors */}
         }
         ev.preventDefault();
       });
 
-      handle.addEventListener('pointermove', (ev)=>{
-        if(!dragging || (pointerId!==null && ev.pointerId!==pointerId)) return;
+      handle.addEventListener('pointermove',(ev)=>{
+        if(!dragging || (pointerId!==null && ev.pointerId!==pointerId))return;
         const t=tabs.find(x=>x.id===activeId);
-        if(!t || !canTabPreview(t)) return;
+        if(!t || !canTabPreview(t))return;
         const mainRect = main.getBoundingClientRect();
         const desiredWidth = mainRect.right - ev.clientX;
-        t.previewWidth = clampPreviewWidthForTab(t, desiredWidth);
+        t.previewWidth = clampPreviewWidthForTab(t,desiredWidth);
         applyPreviewWidth(t);
         save();
       });
 
-      handle.addEventListener('pointerup', stopDragging);
-      handle.addEventListener('pointercancel', stopDragging);
+      handle.addEventListener('pointerup',stopDragging);
+      handle.addEventListener('pointercancel',stopDragging);
     }
 
     function canTabPreview(tab){
-      if(!tab || tab.mode!=='text') return false;
-      if(tab.language==='markdown' || tab.language==='htmlmixed') return canUseSecureIframePreview();
-      if(tab.language==='json') return !!window.JSONFormatter;
+      if(!tab || tab.mode!=='text')return false;
+      if(tab.language==='markdown' || tab.language==='htmlmixed')return canUseSecureIframePreview();
+      if(tab.language==='json')return!!window.JSONFormatter;
       return false;
     }
 
-    function switchEditorMode(mode, tabId){
+    function switchEditorMode(mode,tabId){
       const els = document.querySelectorAll('.editor-instance');
       els.forEach(e=>e.classList.remove('active'));
       const t = tabs.find(x=>x.id===tabId);
       applyPreviewVisibility(t);
       syncPreviewToggleState();
       document.getElementById('languageSelect').style.display = mode==='text' ? 'inline-block' : 'none';
-      if(mode==='text') {
+      if(mode==='text'){
         document.getElementById('textEditor').classList.add('active');
         initCodeMirror(tabId);
-      } else if(mode==='rich') {
+      }else if(mode==='rich'){
         document.getElementById('richEditor').classList.add('active');
-      } else if(mode==='notepad') {
+      }else if(mode==='notepad'){
         document.getElementById('notepadEditor').classList.add('active');
       }
     }
 
     function applyThemeToEditor(theme){
-      if(!theme) return;
+      if(!theme)return;
       // determine which element is currently visible for styling
       const t = tabs.find(x=>x.id===activeId);
-      if(!t) return;
+      if(!t)return;
       let target = null;
-      if(t.mode==='text') {
+      if(t.mode==='text'){
         const ed = editors[t.id];
         if(ed && ed.cm && typeof ed.cm.getWrapperElement==='function') target = ed.cm.getWrapperElement();
         else target = document.getElementById('textEditor');
-      } else if(t.mode==='rich') {
+      }else if(t.mode==='rich'){
         const ed = editors[t.id];
         if(ed && ed.quill) target = ed.quill.root;
-      } else if(t.mode==='notepad') {
+      }else if(t.mode==='notepad'){
         // notepad theme applies to notes container
         target = document.getElementById('notesContainer');
       }
-      if(!target) return;
+      if(!target)return;
       if(theme.fontFamily) target.style.fontFamily=theme.fontFamily;
       if(theme.fontSize) target.style.fontSize=theme.fontSize+'px';
       if(theme.bg) target.style.background=theme.bg;
@@ -721,7 +720,7 @@
     function syncPreviewToggleState(){
       const preview=document.getElementById('preview');
       const btn=document.getElementById('togglePreview');
-      if(!preview||!btn) return;
+      if(!preview||!btn)return;
       const t=tabs.find(x=>x.id===activeId);
       const canPreview=canTabPreview(t);
       btn.disabled=!canPreview;
@@ -730,14 +729,14 @@
       const secureReady=canUseSecureIframePreview();
       if(canPreview){
         btn.title='Toggle preview';
-      } else if(isHtmlOrMarkdown && !secureReady){
+      }else if(isHtmlOrMarkdown && !secureReady){
         btn.title='Preview disabled: browser lacks secure iframe support (sandbox + srcdoc)';
-      } else {
+      }else {
         btn.title=jsonReady?'Preview available only for Markdown/HTML/JSON':'Preview available only for Markdown/HTML (JSON formatter unavailable)';
       }
       const isVisible=!preview.classList.contains('hidden');
-      btn.classList.toggle('is-active', isVisible);
-      btn.setAttribute('aria-pressed', String(isVisible));
+      btn.classList.toggle('is-active',isVisible);
+      btn.setAttribute('aria-pressed',String(isVisible));
     }
 
     // UI wiring
@@ -749,7 +748,7 @@
         saveCurrentEditor();
         t.mode=e.target.value;
         if(t.mode==='text' && !t.language) t.language='plain';
-        switchEditorMode(t.mode, t.id);
+        switchEditorMode(t.mode,t.id);
         setEditorContent(t.content);
         save();
         updatePreview();
@@ -763,7 +762,7 @@
           t.previewVisible=false;
         }
         if(editors[t.id] && editors[t.id].cm){
-          editors[t.id].cm.setOption('mode', t.language);
+          editors[t.id].cm.setOption('mode',t.language);
         }
         save();
         updatePreview();
@@ -773,7 +772,7 @@
     })
     document.getElementById('togglePreview').onclick=()=>{
       const t=tabs.find(x=>x.id===activeId);
-      if(!canTabPreview(t)) return;
+      if(!canTabPreview(t))return;
       t.previewVisible = !t.previewVisible;
       applyPreviewVisibility(t);
       save();
@@ -788,7 +787,7 @@
       p.style.display=p.style.display==='none'?'block':'none';
     }
     document.getElementById('applyTheme').onclick=()=>{
-      const t=tabs.find(x=>x.id===activeId);if(!t) return;
+      const t=tabs.find(x=>x.id===activeId);if(!t)return;
       t.theme={fontFamily:document.getElementById('fontFamily').value,fontSize:document.getElementById('fontSize').value,bg:document.getElementById('bgColor').value,fg:document.getElementById('fgColor').value};
       applyThemeToEditor(t.theme);save();
     }
@@ -822,7 +821,7 @@
     // import/export helpers
     function exportCurrent(){
       const t=tabs.find(x=>x.id===activeId);
-      if(!t) return;
+      if(!t)return;
       const blob=new Blob([t.content||''],{type:'text/plain'});
       const a=document.createElement('a');
       a.href=URL.createObjectURL(blob);
@@ -832,7 +831,7 @@
     }
     function handleImport(e){
       const file=e.target.files[0];
-      if(!file) return;
+      if(!file)return;
       const reader=new FileReader();
       reader.onload=()=>{
         const text=reader.result;
@@ -852,7 +851,7 @@
     // keyboard shortcuts
     document.addEventListener('keydown',ev=>{
       const cmd = ev.metaKey||ev.ctrlKey;
-      if(!cmd) return;
+      if(!cmd)return;
       switch(ev.key.toLowerCase()){
         case 's': ev.preventDefault(); exportCurrent(); break;
         case 'o': ev.preventDefault(); document.getElementById('importBtn').click(); break;
@@ -887,8 +886,8 @@
       },
       setActiveTabPreviewWidth:(width)=>{
         const t=tabs.find(x=>x.id===activeId);
-        if(!t) return;
-        t.previewWidth = clampPreviewWidthForTab(t, width);
+        if(!t)return;
+        t.previewWidth = clampPreviewWidthForTab(t,width);
         applyPreviewWidth(t);
         save();
       }
