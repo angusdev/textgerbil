@@ -1,5 +1,7 @@
 # TextGerbil
 
+![TextGerbil](images/textgerbil.png)
+
 **TextGerbil** is a single-file, web-based text editor that runs entirely
 in the browser. Open `index.html` on any machine (no server required) and it
 stores your tabs, contents and settings in `localStorage`.
