@@ -6,7 +6,7 @@ const fs = require('fs');
 const { JSDOM } = require('jsdom');
 
 (async function () {
-  const html = fs.readFileSync('index.html', 'utf8');
+  const html = fs.readFileSync('index.html', 'utf8').replace(/<script src="https:\/\/cdn.tailwindcss.com"><\/script>/, '');
   const dom = new JSDOM(html, { runScripts: 'dangerously', resources: 'usable',
     beforeParse(window) {
       // flag we are running under headless jsdom so the app can stub editors
