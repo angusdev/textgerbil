@@ -498,8 +498,8 @@ const { JSDOM } = require('jsdom');
           const restored = sw.__textgerbil.tabs.find(x => x.id === 'script-tab');
           assert(restored && restored.previewVisible === false, 'Init sets missing previewVisible to false');
           assert(restored && restored.previewWidth === DEFAULT_PREVIEW_WIDTH, 'Init sets missing previewWidth to default');
-          assert(restored && restored.language === 'javascript', 'Init infers missing language for active text tab');
-          assert(sdoc.getElementById('languageSelect').value === 'javascript', 'Init syncs inferred language to selector');
+          assert(restored && restored.language === 'detect', 'Init sets missing language to detect');
+          assert(sdoc.getElementById('languageSelect').value === 'detect', 'Init syncs detect language to selector');
         }
       );
 
@@ -730,7 +730,12 @@ const { JSDOM } = require('jsdom');
 
       checkCSP('markdown');
       checkCSP('htmlmixed');
-      checkCSP('json');
+      checkCSP('css');
+
+      // Test 42: Language dropdown order
+      const langOptions = Array.from(doc.getElementById('languageSelect').options).map(o => o.text);
+      const expectedOrder = ['Detect', 'Plain', 'CSS', 'HTML', 'JavaScript', 'JSON', 'Markdown', 'Python', 'SQL'];
+      assert(JSON.stringify(langOptions) === JSON.stringify(expectedOrder), 'Language dropdown order is correct (Detect, Plain, then Alphabetical)');
 
     } catch (e) {
       console.error('test error', e);

@@ -84,13 +84,14 @@
             <option value="notepad">Notepad</option>
           </select>
           <select id="languageSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Language" aria-label="Select language for syntax highlighting" style="display:none;">
+            <option value="detect">Detect</option>
             <option value="plain">Plain</option>
-            <option value="javascript">JavaScript</option>
-            <option value="python">Python</option>
-            <option value="markdown">Markdown</option>
-            <option value="htmlmixed">HTML</option>
             <option value="css">CSS</option>
+            <option value="htmlmixed">HTML</option>
+            <option value="javascript">JavaScript</option>
             <option value="json">JSON</option>
+            <option value="markdown">Markdown</option>
+            <option value="python">Python</option>
             <option value="sql">SQL</option>
           </select>
           <button id="togglePreview" class="small" aria-label="Toggle preview" title="Preview">
@@ -248,7 +249,17 @@
       t.title=(newTitle||'').trim()||'Untitled';
       save();
       renderTabs();
-      if(activeId===tabId) document.getElementById('tabTitle').textContent=t.title;
+      if(activeId===tabId) {
+        document.getElementById('tabTitle').textContent=t.title;
+        if(t.mode==='text' && t.language==='detect'){
+          if(editors[t.id] && editors[t.id].cm){
+            editors[t.id].cm.setOption('mode',detectLanguageFromTitle(t.title));
+          }
+          updatePreview();
+          applyPreviewVisibility(t);
+          syncPreviewToggleState();
+        }
+      }
     }
 
     function enableTabRename(tabEl,tabId){
@@ -285,7 +296,7 @@
       tab.content = typeof tab.content==='string' ? tab.content : '';
       tab.theme = (tab.theme && typeof tab.theme==='object') ? tab.theme : {};
       if(tab.mode==='text'){
-        tab.language = tab.language || detectLanguageFromTitle(tab.title) || 'plain';
+        tab.language = tab.language || 'detect';
       }else {
         tab.language = tab.language || 'plain';
       }
@@ -303,8 +314,7 @@
       document.getElementById('tabTitle').textContent=t.title;
       document.getElementById('modeSelect').value=t.mode;
       if(t.mode==='text'){
-        if(!t.language) t.language = detectLanguageFromTitle(t.title);
-        document.getElementById('languageSelect').value=t.language;
+        document.getElementById('languageSelect').value=t.language || 'detect';
       }
       applyPreviewWidth(t);
       switchEditorMode(t.mode,id);
@@ -355,7 +365,7 @@
 
     function newTab(mode='text'){
       saveCurrentEditor();
-      const t={id:uid(),title:'Untitled',mode,language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
+      const t={id:uid(),title:'Untitled',mode,language:'detect',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
       if(mode==='notepad') t.notepadData=[];
       if(globalTheme){t.theme=Object.assign({},globalTheme);} // inherit global
       tabs.push(t);
@@ -412,8 +422,10 @@
       const pv=document.getElementById('previewContent');
       if(!t||!pv)return;
       pv.innerHTML='';
+      let lang = t.language;
+      if(lang==='detect') lang=detectLanguageFromTitle(t.title);
       if(t.mode==='text'){
-        if(t.language==='markdown'){
+        if(lang==='markdown'){
           initMarkdownIt();
           if(md){
             if(!canUseSecureIframePreview()){
@@ -423,20 +435,20 @@
               pv.appendChild(buildSandboxedPreviewIframe(html));
             }
           }else {pv.textContent=t.content}
-        }else if(t.language==='htmlmixed'){
+        }else if(lang==='htmlmixed'){
           if(!canUseSecureIframePreview()){
             renderPreviewError('Secure preview unavailable',SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
           }else {
             pv.appendChild(buildSandboxedPreviewIframe(t.content||''));
           }
-        }else if(t.language==='css'){
+        }else if(lang==='css'){
           if(!canUseSecureIframePreview()){
             renderPreviewError('Secure preview unavailable',SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
           }else {
             const sampleHtml = '<style>' + (t.content || '') + '</style><div><h1>Previewing styles...</h1><p>Rules applied below:</p><ul><li>List Item A</li><li>List Item B</li></ul><button style="padding:4px 8px;border-radius:4px;border:1px solid #ccc;cursor:pointer">Demo Button</button></div>';
             pv.appendChild(buildSandboxedPreviewIframe(sampleHtml));
           }
-        }else if(t.language==='json'){
+        }else if(lang==='json'){
           const raw=t.content||'';
           try {
             const parsed=JSON.parse(raw||'{}');
@@ -544,7 +556,8 @@
       if(ed.cm && typeof ed.cm.toTextArea === 'function') ed.cm.toTextArea();
       const t = tabs.find(x=>x.id===tabId);
       if(!t)return;
-      const lang = t.language || 'plain';
+      let lang = t.language || 'detect';
+      if(lang==='detect') lang=detectLanguageFromTitle(t.title);
       const textEditorEl = document.getElementById('textEditor');
       textEditorEl.innerHTML='';
       // headless environment (tests) may set a flag to avoid CodeMirror's heavy logic
@@ -668,8 +681,10 @@
 
     function canTabPreview(tab){
       if(!tab || tab.mode!=='text')return false;
-      if(tab.language==='markdown' || tab.language==='htmlmixed' || tab.language==='css')return canUseSecureIframePreview();
-      if(tab.language==='json')return!!window.JSONFormatter;
+      let lang = tab.language;
+      if(lang==='detect') lang=detectLanguageFromTitle(tab.title);
+      if(lang==='markdown' || lang==='htmlmixed' || lang==='css')return canUseSecureIframePreview();
+      if(lang==='json')return!!window.JSONFormatter;
       return false;
     }
 
@@ -731,7 +746,9 @@
       const t=tabs.find(x=>x.id===activeId);
       const canPreview=canTabPreview(t);
       btn.disabled=!canPreview;
-      const isHtmlOrMarkdown=!!(t && t.mode==='text' && (t.language==='markdown' || t.language==='htmlmixed'));
+      let lang = t?t.language:'plain';
+      if(lang==='detect') lang=detectLanguageFromTitle(t.title);
+      const isHtmlOrMarkdown=!!(t && t.mode==='text' && (lang==='markdown' || lang==='htmlmixed' || lang==='css'));
       const jsonReady=!!window.JSONFormatter;
       const secureReady=canUseSecureIframePreview();
       if(canPreview){
@@ -769,7 +786,9 @@
           t.previewVisible=false;
         }
         if(editors[t.id] && editors[t.id].cm){
-          editors[t.id].cm.setOption('mode',t.language);
+          let realLang = t.language;
+          if(realLang==='detect') realLang=detectLanguageFromTitle(t.title);
+          editors[t.id].cm.setOption('mode',realLang);
         }
         save();
         updatePreview();
@@ -844,7 +863,7 @@
         const text=reader.result;
         // open in new tab
         const newId=uid();
-        const t={id:newId,title:file.name,mode:'plain',content:text,theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
+        const t={id:newId,title:file.name,mode:'text',language:'detect',content:text,theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
         if(globalTheme) t.theme=Object.assign({},globalTheme);
         tabs.push(t);
         activeId=newId;
