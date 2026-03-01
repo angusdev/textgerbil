@@ -109,12 +109,6 @@ root of the repo). You're welcome to fork, modify or reuse any part of it.
 Source is hosted on GitHub — clone or fork the repo:
 ```bash
 git clone https://github.com/angusdev/textgerbil.git
-```
-Issue reports and pull requests are welcome; the repository includes a
-`.gitignore` and minimal `package.json` for running the headless tests.  
-A GitHub Action (`.github/workflows/gh-pages.yml`) automatically runs the
-suite and publishes the contents of the repo to the `gh-pages` branch so the
-app can be hosted via GitHub Pages.
 
 > ⚠️ **Disclaimer:** this is a personal "vibe-coding" project—written in a
 > stream-of-consciousness style. The source may look messy; instead of trying to
