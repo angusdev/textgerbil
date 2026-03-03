@@ -652,16 +652,17 @@
       const ed = editors[t.id] || {};
       if(t.mode==='text' && ed.cm)return ed.cm.getValue();
       if(t.mode==='rich' && ed.quill)return ed.quill.root.innerHTML;
-      if(t.mode==='notepad'){
-        // convert notes array to Markdown joined by Level 1 headers
-        if(!t.notepadData)return'';
-        return t.notepadData.map(n=>{
-          const title = (n.title||'').trim();
-          const body = (n.text||'').split('\n').map(line=>line.startsWith('#') ? ' ' + line : line).join('\n');
-          return`# ${title}\n${body}`;
-        }).join('\n\n');
-      }
+      if(t.mode==='notepad')return notesToMarkdown(t.notepadData);
       return'';
+    }
+
+    function notesToMarkdown(notes){
+      if(!notes)return'';
+      return notes.map(n=>{
+        const title = (n.title||'').trim();
+        const body=(n.text||'').split('\n').map(l=>l.startsWith('#')?' '+l:l).join('\n');
+        return`# ${title}\n${body}`;
+      }).join('\n\n');
     }
 
     function setEditorContent(content){

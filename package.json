@@ -4,7 +4,9 @@
   "description": "Single-file browser text editor with multi-tab modes and headless tests.",
   "main": "index.html",
   "scripts": {
-    "test": "node test/run_headless_test.js",
+    "test:unit": "node test/run_unit_tests.js",
+    "test:headless": "node test/run_headless_test.js",
+    "test": "npm run test:unit && npm run test:headless",
     "lint": "eslint index.html",
     "lint:fix": "eslint index.html --fix"
   },
