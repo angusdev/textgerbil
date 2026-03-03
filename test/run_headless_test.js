@@ -284,33 +284,27 @@ const { JSDOM } = require('jsdom');
       assert(getWriteCount(STORAGE_GLOBAL) > writesBeforeGlobalTheme, 'Apply global triggers global-theme autosave');
 
       // Test 22: Autosave on rename tab (Enter)
-      const tabBeforeRename = doc.querySelector('.tab');
-      if (tabBeforeRename) {
+      const tabTitleEl = doc.getElementById('tabTitle');
+      if (tabTitleEl) {
         const renameWritesBefore = getWriteCount(STORAGE_KEY);
-        const renameTitle = tabBeforeRename.querySelector('span:first-child');
-        if (renameTitle) {
-          renameTitle.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
-          const renameInput = tabBeforeRename.querySelector('input');
-          if (renameInput) {
-            renameInput.value = 'Renamed via Enter';
-            renameInput.dispatchEvent(new w.KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
-          }
+        tabTitleEl.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+        const renameInput = tabTitleEl.querySelector('input');
+        if (renameInput) {
+          renameInput.value = 'Renamed via Enter';
+          renameInput.dispatchEvent(new w.KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
         }
         assert(getWriteCount(STORAGE_KEY) > renameWritesBefore, 'Rename via Enter triggers autosave');
       }
 
       // Test 23: Autosave on rename tab (blur)
-      const tabBeforeBlurRename = doc.querySelector('.tab');
-      if (tabBeforeBlurRename) {
+      const tabTitleBlurEl = doc.getElementById('tabTitle');
+      if (tabTitleBlurEl) {
         const renameWritesBeforeBlur = getWriteCount(STORAGE_KEY);
-        const renameTitleBlur = tabBeforeBlurRename.querySelector('span:first-child');
-        if (renameTitleBlur) {
-          renameTitleBlur.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
-          const renameInputBlur = tabBeforeBlurRename.querySelector('input');
-          if (renameInputBlur) {
-            renameInputBlur.value = 'Renamed via Blur';
-            renameInputBlur.dispatchEvent(new w.FocusEvent('blur', { bubbles: true }));
-          }
+        tabTitleBlurEl.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+        const renameInputBlur = tabTitleBlurEl.querySelector('input');
+        if (renameInputBlur) {
+          renameInputBlur.value = 'Renamed via Blur';
+          renameInputBlur.dispatchEvent(new w.FocusEvent('blur', { bubbles: true }));
         }
         assert(getWriteCount(STORAGE_KEY) > renameWritesBeforeBlur, 'Rename via blur triggers autosave');
       }
@@ -373,24 +367,32 @@ const { JSDOM } = require('jsdom');
       assert(true, 'Keyboard shortcut handler runs without error');
 
       // Test 30: Rename tab (via UI double-click)
-      const firstTab = doc.querySelector('.tab');
-      if (firstTab) {
-        const titleSpan = firstTab.querySelector('span:first-child');
-        if (titleSpan) {
-          const dblClickEvent = new w.MouseEvent('dblclick', { bubbles: true });
-          titleSpan.dispatchEvent(dblClickEvent);
-          // After double-click, span should be replaced with input
-          const input = firstTab.querySelector('input');
-          assert(!!input, 'Tab title becomes editable input on double-click');
-          if (input) {
-            input.value = 'UI Edited Tab';
-            input.dispatchEvent(new w.KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
-            // After Enter, input should be replaced with span again
-            assert(true, 'Tab renamed via UI executed without error');
-          }
+      // Test 29: Tab title double-click replacement in UI (main title)
+      const titleToTest = doc.getElementById('tabTitle');
+      if (titleToTest) {
+        const dblClickEvent = new w.MouseEvent('dblclick', { bubbles: true });
+        titleToTest.dispatchEvent(dblClickEvent);
+        // After double-click, title should contain an input
+        const input = titleToTest.querySelector('input');
+        assert(!!input, 'Main title becomes editable input on double-click');
+        if (input) {
+          input.value = 'UI Edited Title';
+          input.dispatchEvent(new w.KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+          assert(true, 'Tab renamed via UI executed without error');
         }
       } else {
-        assert(false, 'No tab found for UI rename test');
+        assert(false, 'No #tabTitle found for UI rename test');
+      }
+
+      // Test 30: Tab in tab bar should NOT be editable on double-click
+      const firstTabEl = doc.querySelector('.tab');
+      if (firstTabEl) {
+        const titleSpan = firstTabEl.querySelector('span:first-child');
+        if (titleSpan) {
+          titleSpan.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+          const input = firstTabEl.querySelector('input');
+          assert(!input, 'Tab in tab bar is NOT editable on double-click');
+        }
       }
 
       // Prior to closing, make sure we're in text mode (CodeMirror) and focus editor

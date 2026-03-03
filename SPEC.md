@@ -131,8 +131,9 @@ existing per-tab themes from storage are preserved.
 Tabs can be renamed in two ways:
 
 **1. Via UI (double-click to edit):**
-Double-click on any tab title to make it editable. Type the new name and press
-Enter or click elsewhere to confirm.
+Double-click on the main tab title element (`#tabTitle`, located above the editor
+area) to make it editable. Type the new name and press Enter or click elsewhere
+to confirm. Double-clicking tabs in the top tab bar has no effect.
 
 **2. Via API:**
 ```js
@@ -141,8 +142,8 @@ window.__textgerbil.save();
 window.__textgerbil.renderTabs(); // refresh tabs display
 ```
 
-The UI rename feature is implemented in `renderTabs()` which adds double-click
-handlers to tab titles and provides `enableTabRename()` / `renameTab()` functions
+The UI rename feature is implemented by adding a double-click handler to the
+`#tabTitle` element, which calls `enableTabRename()` / `renameTab()`.
 for inline editing.
 
 ## Extensibility Points / Future Work

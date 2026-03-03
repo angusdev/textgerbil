@@ -36,8 +36,8 @@ Live demo: https://angusdev.github.io/textgerbil
 3. Change the editor mode (Text, Rich, or Notes) using the **toggle buttons** in the toolbar.
 4. Toggle the preview sidebar with the **Preview** (Eye) button.
 5. Edit text – changes are saved automatically in local storage.
-6. **Rename a tab** by double-clicking its title to edit inline. Press Enter
-   or click elsewhere to confirm.
+6. **Rename a tab** by double-clicking the title area above the editor to edit inline.
+   Press Enter or click elsewhere to confirm.
 7. Use the **Export** button (download icon) or `Ctrl/Cmd+S` to save the current tab to a
    `.txt` file. Use the **Import** button (upload icon) or `Ctrl/Cmd+O` to open a local file in a new
    tab.

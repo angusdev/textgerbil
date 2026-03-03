@@ -331,17 +331,24 @@
       }
     }
 
-    function enableTabRename(tabEl,tabId){
-      const titleSpan=tabEl.querySelector('span:first-child');
-      if(!titleSpan)return;
-      const oldTitle=titleSpan.textContent;
+    function enableTabRename(el,tabId,isMainTitle=false){
+      let target=el;
+      if(!isMainTitle) target=el.querySelector('span:first-child');
+      if(!target)return;
+      const oldTitle=target.textContent;
       const input=document.createElement('input');
       input.type='text';
       input.value=oldTitle;
-      input.style.cssText='padding:4px;border:1px solid var(--accent);border-radius:4px;width:100px;font-size:13px';
-      titleSpan.replaceWith(input);
+      if(isMainTitle){
+        input.className='font-semibold text-slate-800 border-none bg-transparent focus:ring-0 p-0 text-inherit w-full';
+        el.innerHTML='';
+        el.appendChild(input);
+      }else {
+        input.style.cssText='padding:4px;border:1px solid var(--accent);border-radius:4px;width:100px;font-size:13px';
+        target.replaceWith(input);
+      }
       input.focus();
-      input.select();
+      if(input.select)input.select();
       const confirmRename=()=>{
         const newTitle=input.value;
         renameTab(tabId,newTitle);
@@ -350,7 +357,7 @@
       input.onblur=confirmRename;
     }
 
-    function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');const base='tab group inline-flex min-w-0 flex-initial cursor-pointer select-none items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';d.className=base+state;const titleSpan=document.createElement('span');titleSpan.className='min-w-0 truncate';titleSpan.textContent=t.title||'Untitled';titleSpan.ondblclick=(e)=>{e.stopPropagation();enableTabRename(d,t.id)};d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close shrink-0 text-slate-400 hover:text-rose-500';closeSpan.textContent='×';closeSpan.title='Close';
+    function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');const base='tab group inline-flex min-w-0 flex-initial cursor-pointer select-none items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';d.className=base+state;const titleSpan=document.createElement('span');titleSpan.className='min-w-0 truncate';titleSpan.textContent=t.title||'Untitled';d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close shrink-0 text-slate-400 hover:text-rose-500';closeSpan.textContent='×';closeSpan.title='Close';
       closeSpan.onclick=(e)=>{e.stopPropagation();try {closeTab(t.id);}catch (err){console.error('closeTab error',err);}};
       d.appendChild(closeSpan);d.onclick=(e)=>{if(e.detail===1)selectTab(t.id)};el.appendChild(d)})}
 
@@ -929,6 +936,7 @@
     }
 
     // UI wiring
+    document.getElementById('tabTitle').ondblclick=()=>enableTabRename(document.getElementById('tabTitle'),activeId,true);
     document.getElementById('addTab').onclick=()=>{newTab('text')}
     document.getElementById('addNoteBtn').addEventListener('click',()=>{addNote()});
     document.querySelectorAll('.mode-btn').forEach(btn=>{
