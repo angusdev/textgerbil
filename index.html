@@ -623,7 +623,7 @@
       const t=tabs.find(x=>x.id===activeId);
       if(!t.notepadData) t.notepadData=[];
       const id=uid();
-      t.notepadData.unshift({id,title:'',text:'',_new:true}); // add to top
+      t.notepadData.push({id,title:'',text:'',_new:true}); // add to end
       t.content = getEditorContent();
       save();
       renderNotepad();

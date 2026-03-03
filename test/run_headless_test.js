@@ -897,6 +897,23 @@ const { JSDOM } = require('jsdom');
       
       assert(multiHashTab.notepadData.length === 1, 'Only 1 note despite every line starting with #');
       assert(multiHashTab.notepadData[0].text === multiBody, 'Multi-line hash body preserved exactly');
+
+      // Test 49: New notes added to end of notepadData
+      w.__textgerbil.newTab('text');
+      const orderTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(orderTestId);
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      
+      doc.getElementById('addNoteBtn').click(); // Note 1
+      let nts = doc.querySelectorAll('#notesContainer textarea');
+      nts[0].value = 'First Note';
+      nts[0].dispatchEvent(new w.Event('input'));
+      
+      doc.getElementById('addNoteBtn').click(); // Note 2
+      nts = doc.querySelectorAll('#notesContainer textarea');
+      assert(nts.length === 2, 'Two notes exist');
+      assert(nts[0].value === 'First Note', 'First note stays at the top');
+      assert(nts[1].value === '', 'Second note is at the bottom');
     } catch (e) {
       console.error('test error', e);
       testsFailed++;
