@@ -21,7 +21,7 @@ Live demo: https://angusdev.github.io/textgerbil
 - Draggable preview pane width, stored per tab
 - Import and export files
 - Keyboard shortcuts (desktop style)
-- State persistence: tabs, contents, preview visibility, preview width, cursor/selection, themes
+- State persistence: tabs, contents, preview visibility, preview width, cursor/selection, themes, and mode-specific flags.
 - Runs entirely in one `index.html` file using CDN libraries
 
 > External libraries are loaded via `<script>` tags from CDNs – you
@@ -33,17 +33,16 @@ Live demo: https://angusdev.github.io/textgerbil
    browser (Chrome, Firefox, Edge, Safari).
 2. The first tab appears automatically; use the **New tab** button (plus icon) or
    `Ctrl/Cmd+T` to create additional tabs.
-3. Change the editor mode (Text editing, Rich Text, or Notepad) using the dropdown.
-4. Toggle the preview sidebar with the **Preview** button (eye icon) (enabled only for Text mode with Markdown, HTML, or JSON language selected).
+3. Change the editor mode (Text, Rich, or Notes) using the **toggle buttons** in the toolbar.
+4. Toggle the preview sidebar with the **Preview** (Eye) button.
 5. Edit text – changes are saved automatically in local storage.
 6. **Rename a tab** by double-clicking its title to edit inline. Press Enter
    or click elsewhere to confirm.
 7. Use the **Export** button (download icon) or `Ctrl/Cmd+S` to save the current tab to a
    `.txt` file. Use the **Import** button (upload icon) or `Ctrl/Cmd+O` to open a local file in a new
    tab.
-8. Click the **Settings** button (gear icon) to adjust fonts and colors; you can apply the
-   style to the current tab or globally.
-9. Close tabs with the `×` icon or `Ctrl/Cmd+W`.
+8. Click the **Settings** (Gear) button to adjust fonts and colors; you can apply the style to the current tab or globally.
+9. Close tabs with the `×` icon or `Ctrl/Cmd+W`. A confirmation dialog will protect you from accidental closures.
 
 The notepad mode lets you keep a list of mini-notes inside a single tab.
 
@@ -72,7 +71,7 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
    npm install
    npm test
    ```
-   The test suite (`test/run_headless_test.js`) currently includes **80+ test cases** covering:
+   The test suite (`test/run_headless_test.js`) currently includes **120+ test cases** covering:
    - Tab creation, switching, and renaming (both API and UI double-click)
    - Tab switching restores focus and prior cursor/selection position
    - Initialization from `localStorage` across multiple saved-state combinations

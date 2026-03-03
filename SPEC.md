@@ -44,6 +44,7 @@ Each tab object has the following shape:
   previewWidth: number, // per-tab preview sidebar width in px
   cursor?: any,        // mode-specific cursor/selection state
   notepadData?: Array, // used when mode === 'notepad'
+  hasBeenNotepad: boolean // safety flag for mode transitions
 }
 ```
 
@@ -69,6 +70,7 @@ Global configuration includes:
 - `selectTab(id)` - switch active tab, save previous state, restore cursor, and focus the editor area.
 - `newTab(mode)` / `closeTab(id)` - manage tab lifecycle.  
   `newTab` saves current editor state before switching to a newly-created tab so prior tab state is preserved.
+  `closeTab` and `removeNote` trigger a premium native `<dialog>` for user confirmation before deletion.
   When closing a tab the implementation now also disposes any associated editor instance (e.g. CodeMirror or Quill) and removes it from the `editors` cache; this prevents errors when the DOM node is torn down.  
   In addition, `initCodeMirror()` and other locations guard against calling `toTextArea()` unless it is a function, avoiding exceptions if the cached editor reference is malformed.
 - `getEditorContent()` / `setEditorContent(content)` - read/write current
@@ -89,15 +91,13 @@ Global configuration includes:
   - `json`: preview rendered as a tree view via `json-formatter-js` when available.
   - other languages: preview unavailable.
 - **rich**: Quill editor with toolbar.
-- **notepad**: custom notes list, each note an independent textarea.
+- **notepad**: custom notes list, each note an independent textarea with a Markdown H1 as the title.
+- **Confirmation dialogs**: implemented via `confirmAction(title, message, onConfirm)` using the native `<dialog>` API.
 
-Mode switching shows/hides the appropriate `.editor-instance` div. The preview
-toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure
-iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` +
-`iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available.
-Preview width is resizable via a drag handle and stored per tab. The width has
-no fixed hard max, but is dynamically clamped so the editor retains a minimum
-usable width.
+Mode switching is managed via **toggle buttons** in the toolbar. The transition from `notepad` to `rich` mode is guarded by a confirmation prompt to prevent unintentional data loss. The language dropdown is visible in all modes but disabled for `rich` and `notepad`. 
+The preview toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` + `iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available.
+Preview width is resizable via a drag handle and stored per tab. The width has no fixed hard max, but is dynamically clamped so the editor retains a minimum usable width.
+Dialogs feature **premium aesthetics**, including backdrop blur, smooth animations, and modern card styling.
 
 ### Preview Security Model
 
@@ -150,7 +150,7 @@ for inline editing.
 ## Testing
 
 A comprehensive headless test suite (`test/run_headless_test.js`) uses `jsdom`
-to load `index.html` with a mocked `localStorage` and execute 80+ test cases:
+to load `index.html` with a mocked `localStorage` and execute **120+ test cases**:
 
 **Test Coverage:**
 1. Tab management (create, switch, rename via API and UI double-click)
