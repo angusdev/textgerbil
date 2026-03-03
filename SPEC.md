@@ -189,7 +189,8 @@ Expected output: `Failed: 0`
 
 ## Modification Guidelines for AI
 
-**Important for AI Assistants:** You MUST run `npm run lint:fix` after EACH AND EVERY change you make to the code to ensure the compact style is maintained and all linting issues are resolved. **DO NOT AUTO-COMMIT** any changes unless the user explicitly asks you to commit. Do not wait for multiple changes to accumulate before linting.
+**Important for AI Assistants:** You MUST run `npm run lint:fix` after EACH AND EVERY change you make to the code to ensure the compact style is maintained and all linting issues are resolved. Do not wait for multiple changes to accumulate before linting.
+**CRITICAL LLM INSTRUCTION (DO NOT AUTO COMMIT):** You must NEVER automatically run `git commit` or auto-commit any code changes. ONLY execute a commit if the user EXPLICITLY asks you to do so (e.g., "commit").
 
 1. **Read the spec**: Use this document to understand state shapes and
    function responsibilities.
