@@ -745,7 +745,7 @@ const { JSDOM } = require('jsdom');
 
       // Test 42: Language dropdown order
       const langOptions = Array.from(doc.getElementById('languageSelect').options).map(o => o.text);
-      const expectedOrder = ['Detect', 'Plain', 'CSS', 'HTML', 'JavaScript', 'JSON', 'Markdown', 'Python', 'SQL'];
+      const expectedOrder = ['Detect', 'Plain', 'CSS', 'HTML', 'Java', 'JavaScript', 'JSON', 'Markdown', 'Python', 'Shell', 'SQL', 'XML', 'YAML'];
       assert(JSON.stringify(langOptions) === JSON.stringify(expectedOrder), 'Language dropdown order is correct (Detect, Plain, then Alphabetical)');
 
       // Test 43: Notepad once flag and Rich mode switch confirmation

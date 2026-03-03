@@ -32,7 +32,7 @@ Each tab object has the following shape:
   id: string,          // unique identifier
   title: string,       // shown in tab label
   mode: string,        // one of: text, rich, notepad
-  language: string,    // text mode language (detect, plain, javascript, python, markdown, htmlmixed, css, json, sql)
+  language: string,    // text mode language (detect, plain, javascript, python, markdown, htmlmixed, css, json, sql, shell, xml, java, yaml)
   content: string,     // raw text/HTML stored
   theme: {             // optional styling overrides
     fontFamily?: string,
@@ -86,6 +86,7 @@ Global configuration includes:
 - **text**: CodeMirror-based text editor. Syntax behavior is determined by the
   `language` field. If set to `detect` (default), the language is inferred from the
   tab title's filename extension. explicit modes are also supported.
+  - `javascript`, `python`, `css`, `htmlmixed`, `markdown`, `sql`, `json`, `shell`, `xml`, `java`, `yaml`.
   - `markdown`: preview rendered with `markdown-it` (`html: false`) and displayed in a sandboxed iframe.
   - `htmlmixed`: preview rendered in a sandboxed iframe.
   - `json`: preview rendered as a tree view via `json-formatter-js` when available.

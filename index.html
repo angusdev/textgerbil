@@ -12,6 +12,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/markdown/markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/sql/sql.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/shell/shell.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/yaml/yaml.min.js"></script>
   <!-- Quill Rich Text Editor CSS & JS -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
@@ -116,11 +122,15 @@
             <option value="plain">Plain</option>
             <option value="css">CSS</option>
             <option value="htmlmixed">HTML</option>
+            <option value="java">Java</option>
             <option value="javascript">JavaScript</option>
             <option value="json">JSON</option>
             <option value="markdown">Markdown</option>
             <option value="python">Python</option>
+            <option value="shell">Shell</option>
             <option value="sql">SQL</option>
+            <option value="xml">XML</option>
+            <option value="yaml">YAML</option>
           </select>
           <button id="togglePreview" class="small" aria-label="Toggle preview" title="Preview">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -264,7 +274,7 @@
     function detectLanguageFromTitle(title){
       if(!title)return'plain';
       const ext = title.split('.').pop().toLowerCase();
-      const map = {'js':'javascript','py':'python','md':'markdown','html':'htmlmixed','htm':'htmlmixed','css':'css','json':'json','sql':'sql','ts':'javascript','jsx':'javascript','tsx':'htmlmixed'};
+      const map = {'js':'javascript','py':'python','md':'markdown','html':'htmlmixed','htm':'htmlmixed','css':'css','json':'json','sql':'sql','sh':'shell','xml':'xml','java':'java','yaml':'yaml','yml':'yaml','ts':'javascript','jsx':'javascript','tsx':'htmlmixed'};
       return map[ext] || 'plain';
     }
 
@@ -705,6 +715,7 @@
       if(!t)return;
       let lang = t.language || 'detect';
       if(lang==='detect') lang=detectLanguageFromTitle(t.title);
+      if(lang==='java') lang='text/x-java';
       const textEditorEl = document.getElementById('textEditor');
       textEditorEl.innerHTML='';
       // headless environment (tests) may set a flag to avoid CodeMirror's heavy logic
