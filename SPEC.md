@@ -97,8 +97,16 @@ Global configuration includes:
 
 Mode switching is managed via **toggle buttons** in the toolbar. The transition from `notepad` to `rich` mode is guarded by a confirmation prompt to prevent unintentional data loss. The language dropdown is visible in all modes but disabled for `rich` and `notepad`. 
 The preview toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` + `iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available.
-Preview width is resizable via a drag handle and stored per tab. The width has no fixed hard max, but is dynamically clamped so the editor retains a minimum usable width.
 Dialogs feature **premium aesthetics**, including backdrop blur, smooth animations, and modern card styling.
+
+### Notepad Serialization & Integrity
+
+To preserve the multi-note structure when switching to **Text** mode or persisting to storage, the `notepadData` array is serialized into a single Markdown-compatible string:
+
+- **Note Boundaries**: Each note is prefixed with a Level 1 Markdown header (`# `). If a note has no title, an **"Empty Header"** (`# ` followed by a newline) is used to ensure the delimiter exists.
+- **Escape Mechanism**: If a line in a note's body starts with a `#` character, it is escaped by prepending a single space (e.g., `#` becomes ` #`). This prevents the parser from misidentifying body text as a new note boundary.
+- **Unescaping**: During deserialization, the parser splits the content by `(?=^# )` and restores the original note bodies by removing the leading space from any line starting with ` #`.
+- **Markdown Compatibility**: This approach ensures the resulting `content` is valid, readable Markdown while maintaining 100% data integrity for the Notepad UI.
 
 ### Preview Security Model
 
@@ -151,7 +159,7 @@ for inline editing.
 ## Testing
 
 A comprehensive headless test suite (`test/run_headless_test.js`) uses `jsdom`
-to load `index.html` with a mocked `localStorage` and execute **120+ test cases**:
+to load `index.html` with a mocked `localStorage` and execute **130+ test cases**:
 
 **Test Coverage:**
 1. Tab management (create, switch, rename via API and UI double-click)

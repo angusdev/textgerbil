@@ -816,6 +816,87 @@ const { JSDOM } = require('jsdom');
       doc.querySelector('.mode-btn[data-mode="notepad"]').click();
       assert(switchTestTab.mode === 'notepad', 'Switched back to notepad mode');
       assert(switchTestTab.notepadData.length === 2, 'Still has 2 notes after switching back');
+
+      // Test 46: Note body starting with # should not break splitting
+      w.__textgerbil.newTab('text');
+      const hashTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(hashTestId);
+      const hashTestTab = w.__textgerbil.tabs.find(x => x.id === hashTestId);
+      
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      doc.getElementById('addNoteBtn').click();
+      const hashTextareas = doc.querySelectorAll('#notesContainer textarea');
+      const complexBody = '# Not a real header\nJust some text';
+      hashTextareas[0].value = complexBody;
+      hashTextareas[0].dispatchEvent(new w.Event('input'));
+      
+      assert(hashTestTab.notepadData.length === 1, 'Starting with 1 note');
+      
+      // Switch to text
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
+      
+      // Switch back to notepad
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      assert(hashTestTab.notepadData.length === 1, 'Should still have only 1 note despite # in body');
+      assert(hashTestTab.notepadData[0].text === complexBody, 'Note content should be preserved exactly');
+
+      // Test 47: Exact preservation of complex bodies and multiple notes
+      w.__textgerbil.newTab('text');
+      const complexId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(complexId);
+      const complexTab = w.__textgerbil.tabs.find(x => x.id === complexId);
+      
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      doc.getElementById('addNoteBtn').click(); // Note 1
+      doc.getElementById('addNoteBtn').click(); // Note 2
+      
+      const cts = doc.querySelectorAll('#notesContainer textarea');
+      const ins = doc.querySelectorAll('#notesContainer input');
+      
+      const body1 = '  Leading space\n# Middle header\nTrailing newline\n';
+      const body2 = '## Nested\n### Even deeper\n# At Start';
+      
+      ins[0].value = 'Title 1';
+      ins[0].dispatchEvent(new w.Event('input'));
+      cts[0].value = body1;
+      cts[0].dispatchEvent(new w.Event('input'));
+      
+      ins[1].value = 'Title 2';
+      ins[1].dispatchEvent(new w.Event('input'));
+      cts[1].value = body2;
+      cts[1].dispatchEvent(new w.Event('input'));
+      
+      // Switch to text
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
+      // Switch back to notepad
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      
+      assert(complexTab.notepadData.length === 2, 'Still has 2 notes');
+      assert(complexTab.notepadData[0].title === 'Title 1', 'Title 1 preserved');
+      const newlineTrim = s => s.replace(/^\n+/, '').replace(/\n+$/, '');
+      assert(complexTab.notepadData[0].text === newlineTrim(body1), 'Body 1 preserved (modulo outer trim)');
+      assert(complexTab.notepadData[1].title === 'Title 2', 'Title 2 preserved');
+      assert(complexTab.notepadData[1].text === newlineTrim(body2), 'Body 2 preserved (modulo outer trim)');
+
+      // Test 48: Body with multiple lines starting with #
+      w.__textgerbil.newTab('text');
+      const multiHashId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(multiHashId);
+      const multiHashTab = w.__textgerbil.tabs.find(x => x.id === multiHashId);
+      
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      doc.getElementById('addNoteBtn').click();
+      
+      const multiCt = doc.querySelector('#notesContainer textarea');
+      const multiBody = '# Line 1\n# Line 2\n# Line 3';
+      multiCt.value = multiBody;
+      multiCt.dispatchEvent(new w.Event('input'));
+      
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      
+      assert(multiHashTab.notepadData.length === 1, 'Only 1 note despite every line starting with #');
+      assert(multiHashTab.notepadData[0].text === multiBody, 'Multi-line hash body preserved exactly');
     } catch (e) {
       console.error('test error', e);
       testsFailed++;

@@ -649,7 +649,9 @@
         // convert notes array to Markdown joined by Level 1 headers
         if(!t.notepadData)return'';
         return t.notepadData.map(n=>{
-          return `# ${(n.title||'').trim()}\n${(n.text||'').trim()}`.trim();
+          const title = (n.title||'').trim();
+          const body = (n.text||'').split('\n').map(line => line.startsWith('#') ? ' ' + line : line).join('\n');
+          return `# ${title}\n${body}`;
         }).join('\n\n');
       }
       return'';
@@ -694,16 +696,17 @@
       // split by level 1 header "# " at start of line
       const parts = markdown.split(/(?=^# )/m);
       return parts.filter(p=>p.trim()).map(p=>{
-        const content = p.trim();
-        const headerMatch = content.match(/^#\s+(.*?)(\n|$)/);
+        const headerMatch = p.match(/^# (.*?)(\n|$)/);
         if(headerMatch){
-          return {
-            id: uid(),
-            title: headerMatch[1].trim(),
-            text: content.substring(headerMatch[0].length).trim()
-          };
+          const title = headerMatch[1].trim();
+          const rest = p.substring(headerMatch[0].length);
+          const lines = rest.split('\n');
+          const unescapedLines = lines.map(line => line.startsWith(' #') ? line.substring(1) : line);
+          let text = unescapedLines.join('\n');
+          text = text.replace(/^\n+/, '').replace(/\n+$/, '');
+          return { id: uid(), title, text };
         }
-        return {id:uid(),title:'',text:content};
+        return {id:uid(),title:'',text:p.trim()};
       });
     }
 
