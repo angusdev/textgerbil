@@ -188,7 +188,7 @@ Expected output: `Failed: 0`
 
 ## Modification Guidelines for AI
 
-**Important for AI Assistants:** Always run `npm run lint:fix` after modifying the code and ensure all linting issues are resolved.
+**Important for AI Assistants:** You MUST run `npm run lint:fix` after EACH AND EVERY change you make to the code to ensure the compact style is maintained and all linting issues are resolved. Do not wait for multiple changes to accumulate before linting.
 
 1. **Read the spec**: Use this document to understand state shapes and
    function responsibilities.
