@@ -194,21 +194,21 @@
     let globalTheme = null
     let editors = {} // store editor instances: {tabId: {cm, quill, ...}}
 
-    function confirmAction(title, message, onConfirm) {
+    function confirmAction(title,message,onConfirm){
       const d = document.getElementById('confirmDialog');
       const tEl = document.getElementById('dialogTitle');
       const mEl = document.getElementById('dialogMessage');
       const cbtn = document.getElementById('dialogConfirm');
       const xbtn = document.getElementById('dialogCancel');
       tEl.textContent = title; mEl.textContent = message;
-      const onOk = () => { onConfirm(); d.close(); cleanup(); };
-      const onNo = () => { d.close(); cleanup(); };
-      const cleanup = () => {
-        cbtn.removeEventListener('click', onOk);
-        xbtn.removeEventListener('click', onNo);
+      const onOk = ()=>{ onConfirm(); d.close(); cleanup(); };
+      const onNo = ()=>{ d.close(); cleanup(); };
+      const cleanup = ()=>{
+        cbtn.removeEventListener('click',onOk);
+        xbtn.removeEventListener('click',onNo);
       };
-      cbtn.addEventListener('click', onOk);
-      xbtn.addEventListener('click', onNo);
+      cbtn.addEventListener('click',onOk);
+      xbtn.addEventListener('click',onNo);
       d.showModal();
     }
     let md = null // markdown-it instance
@@ -318,7 +318,7 @@
       t.title=(newTitle||'').trim()||'Untitled';
       save();
       renderTabs();
-      if(activeId===tabId) {
+      if(activeId===tabId){
         document.getElementById('tabTitle').textContent=t.title;
         if(t.mode==='text' && t.language==='detect'){
           if(editors[t.id] && editors[t.id].cm){
@@ -384,7 +384,7 @@
       document.getElementById('tabTitle').textContent=t.title;
       // Update mode toggle status
       document.querySelectorAll('.mode-btn').forEach(b=>{
-        b.classList.toggle('active', b.dataset.mode === t.mode);
+        b.classList.toggle('active',b.dataset.mode === t.mode);
       });
       if(t.mode==='text'){
         document.getElementById('languageSelect').value=t.language || 'detect';
@@ -452,7 +452,7 @@
     function closeTab(id){
       const t = tabs.find(x=>x.id===id);
       const title = t ? t.title : 'Untitled';
-      confirmAction('Close Tab', `Are you sure you want to close "${title}"? Any unsaved changes will be lost permanently.`, () => {
+      confirmAction('Close Tab',`Are you sure you want to close "${title}"? Any unsaved changes will be lost permanently.`,()=>{
         const idx = tabs.findIndex(x=>x.id === id);
         if(idx === -1)return;
         if(editors[id]){
@@ -597,7 +597,7 @@
         ta.dataset.noteId=note.id;
         ta.value=note.text;
         ta.rows = 1;
-        const autoResize = (el) => {
+        const autoResize = (el)=>{
           el.style.height = 'auto';
           el.style.height = (el.scrollHeight) + 'px';
         };
@@ -629,7 +629,7 @@
       renderNotepad();
     }
     function removeNote(id){
-      confirmAction('Delete Note', 'Are you sure you want to delete this note? This action cannot be undone.', () => {
+      confirmAction('Delete Note','Are you sure you want to delete this note? This action cannot be undone.',()=>{
         const t=tabs.find(x=>x.id===activeId);
         if(!t.notepadData)return;
         t.notepadData=t.notepadData.filter(n=>n.id!==id);
@@ -650,8 +650,8 @@
         if(!t.notepadData)return'';
         return t.notepadData.map(n=>{
           const title = (n.title||'').trim();
-          const body = (n.text||'').split('\n').map(line => line.startsWith('#') ? ' ' + line : line).join('\n');
-          return `# ${title}\n${body}`;
+          const body = (n.text||'').split('\n').map(line=>line.startsWith('#') ? ' ' + line : line).join('\n');
+          return`# ${title}\n${body}`;
         }).join('\n\n');
       }
       return'';
@@ -701,12 +701,12 @@
           const title = headerMatch[1].trim();
           const rest = p.substring(headerMatch[0].length);
           const lines = rest.split('\n');
-          const unescapedLines = lines.map(line => line.startsWith(' #') ? line.substring(1) : line);
+          const unescapedLines = lines.map(line=>line.startsWith(' #') ? line.substring(1) : line);
           let text = unescapedLines.join('\n');
-          text = text.replace(/^\n+/, '').replace(/\n+$/, '');
-          return { id: uid(), title, text };
+          text = text.replace(/^\n+/,'').replace(/\n+$/,'');
+          return{id: uid(),title,text};
         }
-        return {id:uid(),title:'',text:p.trim()};
+        return{id:uid(),title:'',text:p.trim()};
       });
     }
 
@@ -931,33 +931,33 @@
     // UI wiring
     document.getElementById('addTab').onclick=()=>{newTab('text')}
     document.getElementById('addNoteBtn').addEventListener('click',()=>{addNote()});
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const t = tabs.find(x => x.id === activeId);
-        if (t) {
+    document.querySelectorAll('.mode-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const t = tabs.find(x=>x.id === activeId);
+        if(t){
           const newMode = btn.dataset.mode;
-          if(newMode === t.mode) return;
+          if(newMode === t.mode)return;
 
-          const performSwitch = () => {
+          const performSwitch = ()=>{
             saveCurrentEditor();
             t.mode = newMode;
-            if (t.mode === 'text' && !t.language) t.language = 'plain';
+            if(t.mode === 'text' && !t.language) t.language = 'plain';
             
             // Update active button state
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+            document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b === btn));
             
-            switchEditorMode(t.mode, t.id);
+            switchEditorMode(t.mode,t.id);
             setEditorContent(t.content);
             save();
             updatePreview();
           };
 
-          if (t.hasBeenNotepad && newMode === 'rich') {
-            confirmAction('Switch to Rich Text', 'This tab has been in Notes mode. Switching to Rich Text mode will reset your notes and they may be lost. Do you want to continue?', () => {
+          if(t.hasBeenNotepad && newMode === 'rich'){
+            confirmAction('Switch to Rich Text','This tab has been in Notes mode. Switching to Rich Text mode will reset your notes and they may be lost. Do you want to continue?',()=>{
               t.hasBeenNotepad = false;
               performSwitch();
             });
-          } else {
+          }else {
             performSwitch();
           }
         }
