@@ -432,7 +432,8 @@ const { JSDOM } = require('jsdom');
                 content: '# Alpha',
                 theme: { fontFamily: 'serif', fontSize: 13, bg: '#fafafa', fg: '#111111' },
                 previewVisible: true,
-                previewWidth: 480
+                previewWidth: 480,
+                hasBeenNotepad: true
               },
               {
                 id: 'tab-beta',
@@ -458,6 +459,8 @@ const { JSDOM } = require('jsdom');
           const restoredActive = sw.__textgerbil.tabs.find(x => x.id === 'tab-beta');
           assert(restoredActive && restoredActive.theme && restoredActive.theme.fontFamily === 'monospace', 'Init keeps per-tab theme from storage');
           assert(restoredActive && restoredActive.previewWidth === 300, 'Init restores per-tab preview width from storage');
+          assert(sw.__textgerbil.tabs.find(x=>x.id==='tab-alpha').hasBeenNotepad === true, 'Init restores hasBeenNotepad flag');
+          assert(sw.__textgerbil.globalTheme && sw.__textgerbil.globalTheme.fontFamily === 'cursive', 'Init restores global theme from storage');
           assert(sdoc.getElementById('notesContainer').style.fontFamily === 'monospace', 'Init applies restored active tab theme');
           sw.__textgerbil.selectTab('tab-alpha');
           const restoredPreview = sdoc.getElementById('preview');
@@ -763,6 +766,30 @@ const { JSDOM } = require('jsdom');
       assert(testTab.mode === 'rich', 'Mode switched to rich after confirmation');
       assert(testTab.hasBeenNotepad === false, 'hasBeenNotepad flag unset after switching away from notepad');
 
+      // Test 44: Notepad data re-derivation from Markdown on boot
+      await runLocalStorageInitScenario(
+        'init-notepad-derivation',
+        {
+          [STORAGE_KEY]: JSON.stringify({
+            tabs: [{
+              id: 'derive-tab',
+              title: 'Derive',
+              mode: 'notepad',
+              content: '# Note 1\nBody 1\n\n# Note 2\nBody 2',
+              theme: {},
+              previewVisible: false
+            }],
+            activeId: 'derive-tab'
+          })
+        },
+        (sw, sdoc) => {
+          const restored = sw.__textgerbil.tabs.find(x => x.id === 'derive-tab');
+          assert(restored && restored.notepadData && restored.notepadData.length === 2, 'Init re-derives notepadData from Markdown content');
+          assert(restored.notepadData[0].title === 'Note 1' && restored.notepadData[0].text === 'Body 1', 'First derived note matches');
+          assert(restored.notepadData[1].title === 'Note 2' && restored.notepadData[1].text === 'Body 2', 'Second derived note matches');
+          assert(sdoc.querySelectorAll('#notesContainer textarea').length === 2, 'Derived notes are rendered in Notepad UI');
+        }
+      );
     } catch (e) {
       console.error('test error', e);
       testsFailed++;

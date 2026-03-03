@@ -360,6 +360,7 @@
         tab.language = tab.language || 'plain';
       }
       if(typeof tab.previewVisible!=='boolean') tab.previewVisible=false;
+      tab.hasBeenNotepad = !!tab.hasBeenNotepad;
       const parsedPreviewWidth = Number(tab.previewWidth);
       tab.previewWidth = Number.isFinite(parsedPreviewWidth) ? Math.max(MIN_PREVIEW_WIDTH,Math.round(parsedPreviewWidth)) : DEFAULT_PREVIEW_WIDTH;
       return tab;
@@ -1059,7 +1060,9 @@
 
     // expose for debugging
     window.__textgerbil = {
-      tabs,
+      get tabs(){return tabs},
+      get activeId(){return activeId},
+      get globalTheme(){return globalTheme},
       save,
       load,
       newTab,
