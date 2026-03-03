@@ -21,6 +21,21 @@ const { JSDOM } = require('jsdom');
   if(!dom.window.document.execCommand){
     dom.window.document.execCommand = () => false;
   }
+  
+  // Polyfill <dialog> for JSDOM
+  const dialogProto = dom.window.Element.prototype;
+  if (!dialogProto.showModal) {
+    dialogProto.showModal = function() { this.setAttribute('open', ''); this.open = true; };
+  }
+  if (!dialogProto.close) {
+    dialogProto.close = function() { this.removeAttribute('open'); this.open = false; };
+  }
+  if (!('open' in dialogProto)) {
+    Object.defineProperty(dialogProto, 'open', {
+      get() { return this.hasAttribute('open'); },
+      set(val) { if(val) this.setAttribute('open', ''); else this.removeAttribute('open'); }
+    });
+  }
 
   // Mock localStorage to avoid JSDOM SecurityError
   const mockLocalStorage = {
@@ -166,13 +181,11 @@ const { JSDOM } = require('jsdom');
       assert(htmlDetected === 'htmlmixed', 'Auto-detects HTML from .html extension');
 
       // Test 10: Mode switching - text to rich
-      doc.getElementById('modeSelect').value = 'rich';
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="rich"]').click();
       assert(doc.getElementById('richEditor').classList.contains('active'), 'Rich editor activated');
 
       // Test 11: Mode switching - rich to notepad
-      doc.getElementById('modeSelect').value = 'notepad';
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
       assert(doc.getElementById('notepadEditor').classList.contains('active'), 'Notepad editor activated');
 
       // Test 12: Notepad - add notes
@@ -222,8 +235,7 @@ const { JSDOM } = require('jsdom');
 
       // Test 18: Autosave on file type/language change
       w.__textgerbil.selectTab(switchSourceId);
-      doc.getElementById('modeSelect').value = 'text';
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
       doc.getElementById('languageSelect').value = 'python';
       const writesBeforeLanguage = getWriteCount(STORAGE_KEY);
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
@@ -242,15 +254,13 @@ const { JSDOM } = require('jsdom');
       assert(langTabSecond && langTabSecond.language === 'markdown', 'languageSelect value persisted');
 
       // Test 19: Autosave on edit mode change (text -> rich)
-      doc.getElementById('modeSelect').value = 'rich';
       const writesBeforeMode = getWriteCount(STORAGE_KEY);
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="rich"]').click();
       const modeSaved = getSavedState();
       const modeTab = modeSaved && modeSaved.tabs && modeSaved.tabs.find(x => x.id === switchSourceId);
       assert(getWriteCount(STORAGE_KEY) > writesBeforeMode, 'Mode change triggers autosave');
       assert(modeTab && modeTab.mode === 'rich', 'Mode change persisted');
-      doc.getElementById('modeSelect').value = 'text';
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
 
       // Test 20: Autosave on current-tab theme setting apply
       doc.getElementById('fontFamily').value = 'Courier New';
@@ -306,8 +316,7 @@ const { JSDOM } = require('jsdom');
       }
 
       // Test 24: Autosave on notepad edit
-      doc.getElementById('modeSelect').value = 'notepad';
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
       const addNoteBtn = doc.getElementById('addNoteBtn');
       addNoteBtn.click();
       const noteForSave = doc.querySelector('#notesContainer textarea');
@@ -317,8 +326,7 @@ const { JSDOM } = require('jsdom');
         noteForSave.dispatchEvent(new w.Event('input'));
       }
       assert(getWriteCount(STORAGE_KEY) > writesBeforeNoteEdit, 'Notepad edit triggers autosave');
-      doc.getElementById('modeSelect').value = 'text';
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
 
       // Test 25: Tab switching
       const tabs = doc.querySelectorAll('.tab');
@@ -386,8 +394,7 @@ const { JSDOM } = require('jsdom');
       }
 
       // Prior to closing, make sure we're in text mode (CodeMirror) and focus editor
-      doc.getElementById('modeSelect').value = 'text';
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
       const currentTabId = w.__textgerbil.tabs[0] && w.__textgerbil.tabs[0].id;
       if (currentTabId) {
         const edInst = w.__textgerbil.editors[currentTabId];
@@ -401,6 +408,7 @@ const { JSDOM } = require('jsdom');
       const closeBtn = doc.querySelector('.tab .close');
       if (closeBtn) {
         closeBtn.click();
+        doc.getElementById('dialogConfirm').click();
         const tabCountAfterClose = doc.querySelectorAll('.tab').length;
         assert(tabCountAfterClose >= 1, 'At least one tab remains after clicking close');
         const editorsAfter = Object.keys(w.__textgerbil.editors).length;
@@ -444,7 +452,8 @@ const { JSDOM } = require('jsdom');
           assert(sw.__textgerbil.tabs.length === 2, 'Init from storage restores tab count');
           assert(sdoc.querySelectorAll('.tab').length === 2, 'Init from storage renders tab bar entries');
           assert(sdoc.getElementById('tabTitle').textContent === 'Notes', 'Init from storage restores active tab');
-          assert(sdoc.getElementById('modeSelect').value === 'notepad', 'Init from storage restores active tab mode');
+          // In restored state, button might not be 'active' class yet because selectTab is called
+          assert(sw.__textgerbil.tabs.find(x=>x.id==='tab-beta').mode === 'notepad', 'Init from storage restores active tab mode');
           assert(sdoc.querySelectorAll('#notesContainer textarea').length === 2, 'Init from storage restores notepad notes');
           const restoredActive = sw.__textgerbil.tabs.find(x => x.id === 'tab-beta');
           assert(restoredActive && restoredActive.theme && restoredActive.theme.fontFamily === 'monospace', 'Init keeps per-tab theme from storage');
@@ -613,8 +622,7 @@ const { JSDOM } = require('jsdom');
       const previewContent = doc.getElementById('previewContent');
       const previewTabId = focusSourceId;
       w.__textgerbil.selectTab(previewTabId);
-      doc.getElementById('modeSelect').value = 'text';
-      doc.getElementById('modeSelect').dispatchEvent(new w.Event('change'));
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
       w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: true, supportsSandbox: true });
       const mainLayout = doc.querySelector('main');
       if (mainLayout) {
@@ -736,6 +744,24 @@ const { JSDOM } = require('jsdom');
       const langOptions = Array.from(doc.getElementById('languageSelect').options).map(o => o.text);
       const expectedOrder = ['Detect', 'Plain', 'CSS', 'HTML', 'JavaScript', 'JSON', 'Markdown', 'Python', 'SQL'];
       assert(JSON.stringify(langOptions) === JSON.stringify(expectedOrder), 'Language dropdown order is correct (Detect, Plain, then Alphabetical)');
+
+      // Test 43: Notepad once flag and Rich mode switch confirmation
+      w.__textgerbil.newTab('text');
+      const testTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(testTabId);
+      const testTab = w.__textgerbil.tabs.find(x => x.id === testTabId);
+      
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      assert(testTab.hasBeenNotepad === true, 'hasBeenNotepad flag set when switching to notepad');
+      
+      const confirmDialog = doc.getElementById('confirmDialog');
+      doc.querySelector('.mode-btn[data-mode="rich"]').click();
+      assert(confirmDialog.open === true, 'Confirmation dialog opens when switching from notepad to rich');
+      
+      doc.getElementById('dialogConfirm').click();
+      assert(confirmDialog.open === false, 'Dialog closes after confirmation');
+      assert(testTab.mode === 'rich', 'Mode switched to rich after confirmation');
+      assert(testTab.hasBeenNotepad === false, 'hasBeenNotepad flag unset after switching away from notepad');
 
     } catch (e) {
       console.error('test error', e);

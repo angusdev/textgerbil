@@ -838,6 +838,7 @@
       const els = document.querySelectorAll('.editor-instance');
       els.forEach(e=>e.classList.remove('active'));
       const t = tabs.find(x=>x.id===tabId);
+      if(mode==='notepad') t.hasBeenNotepad = true;
       applyPreviewVisibility(t);
       syncPreviewToggleState();
       const langSelect = document.getElementById('languageSelect');
@@ -920,17 +921,31 @@
       btn.addEventListener('click', () => {
         const t = tabs.find(x => x.id === activeId);
         if (t) {
-          saveCurrentEditor();
-          t.mode = btn.dataset.mode;
-          if (t.mode === 'text' && !t.language) t.language = 'plain';
-          
-          // Update active button state
-          document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
-          
-          switchEditorMode(t.mode, t.id);
-          setEditorContent(t.content);
-          save();
-          updatePreview();
+          const newMode = btn.dataset.mode;
+          if(newMode === t.mode) return;
+
+          const performSwitch = () => {
+            saveCurrentEditor();
+            t.mode = newMode;
+            if (t.mode === 'text' && !t.language) t.language = 'plain';
+            
+            // Update active button state
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+            
+            switchEditorMode(t.mode, t.id);
+            setEditorContent(t.content);
+            save();
+            updatePreview();
+          };
+
+          if (t.hasBeenNotepad && newMode === 'rich') {
+            confirmAction('Switch to Rich Text', 'This tab has been in Notes mode. Switching to Rich Text mode will reset your notes and they may be lost. Do you want to continue?', () => {
+              t.hasBeenNotepad = false;
+              performSwitch();
+            });
+          } else {
+            performSwitch();
+          }
         }
       });
     });
