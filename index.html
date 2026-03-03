@@ -41,7 +41,8 @@
   <style>
     :root{--accent:#2b8be6}
     html,body{height:100%;margin:0}
-    textarea{flex:1;width:100%;height:100%;resize:none;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;border:1px solid #e2e8f0;border-radius:8px;background:white;color:inherit}
+    textarea{width:100%;resize:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;border:1px solid #e2e8f0;border-radius:8px;background:white;color:inherit}
+    #textEditor textarea, #richEditor textarea {flex:1;height:100%;padding:12px}
     .editor-instance{flex:1;width:100%;height:100%;display:none}
     .editor-instance.active{display:flex}
     .CodeMirror{flex:1;width:100%;height:100%;font-size:14px}
@@ -59,6 +60,17 @@
     #previewResizeHandle{width:12px;cursor:col-resize;position:relative;touch-action:none}
     #previewResizeHandle::before{content:'';position:absolute;left:5px;top:8px;bottom:8px;width:2px;border-radius:2px;background:#cbd5e1}
     #previewResizeHandle:hover::before{background:#2b8be6}
+    .note-card{break-inside:avoid;margin-bottom:12px;background:white;border:1px solid #e2e8f0;border-radius:12px;display:flex;flex-direction:column;box-shadow:0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);transition:all 0.2s;overflow:hidden}
+    .note-card:hover{box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);border-color:#cbd5e1}
+    .note-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+    .note-body{padding:12px}
+    .note-textarea{width:100%;resize:none;border:none !important;padding:0 !important;outline:none !important;box-shadow:none !important;background:transparent !important;font-size:14px;line-height:1.5;overflow:hidden}
+    .mode-toggle-group{display:inline-flex;background:#f1f5f9;padding:2px;border-radius:10px;border:1px solid #e2e8f0;gap:2px}
+    .mode-btn{padding:4px 10px;font-size:13px;border-radius:8px;border:none;background:transparent;color:#64748b;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1;font-weight:500;transition:all 0.2s}
+    .mode-btn:hover{color:#0f172a;background:#e2e8f0}
+    .mode-btn.active{background:white;color:#0f172a;box-shadow:0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)}
+    .mode-btn svg{width:16px;height:16px;opacity:0.7}
+    .mode-btn.active svg{opacity:1;color:var(--accent)}
   </style>
 </head>
 <body class="h-screen bg-slate-100 text-slate-900">
@@ -82,12 +94,21 @@
         <div class="flex flex-wrap items-center gap-2">
           <div id="tabTitle" class="font-semibold text-slate-800"></div>
           <div class="toolbar ml-auto flex flex-wrap items-center gap-2">
-          <select id="modeSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Mode" aria-label="Select editor mode">
-            <option value="text">Text</option>
-            <option value="rich">Rich Text</option>
-            <option value="notepad">Notepad</option>
-          </select>
-          <select id="languageSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Language" aria-label="Select language for syntax highlighting" style="display:none;">
+            <div class="mode-toggle-group" id="modeToggle">
+              <button class="mode-btn" data-mode="text" title="Text Code Editor">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+                <span>Text</span>
+              </button>
+              <button class="mode-btn" data-mode="rich" title="Rich Text Editor">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span>Rich</span>
+              </button>
+              <button class="mode-btn" data-mode="notepad" title="Notepad mode">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h1"/></svg>
+                <span>Notes</span>
+              </button>
+            </div>
+          <select id="languageSelect" class="h-[30px] rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800" title="Language" aria-label="Select language for syntax highlighting">
             <option value="detect">Detect</option>
             <option value="plain">Plain</option>
             <option value="css">CSS</option>
@@ -114,12 +135,12 @@
         <div class="editor flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div id="textEditor" class="editor-instance active"></div>
           <div id="richEditor" class="editor-instance flex-col"></div>
-          <div id="notepadEditor" class="editor-instance flex-col gap-2 overflow-auto p-2">
+          <div id="notepadEditor" class="editor-instance flex-col gap-4 overflow-auto p-4">
             <button id="addNoteBtn" class="small btn" style="align-self:flex-start">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
               <span>Note</span>
             </button>
-            <div id="notesContainer" class="flex flex-col gap-2"></div>
+            <div id="notesContainer" class="columns-1 sm:columns-2 lg:columns-3 gap-4"></div>
           </div>
         </div>
         <div class="settings grid grid-cols-1 gap-2 border-t border-slate-200 pt-2 md:grid-cols-2" id="settingsPanel" style="display:none">
@@ -316,9 +337,13 @@
       if(activeId && activeId!==id) saveCurrentEditor();
       activeId=id;
       document.getElementById('tabTitle').textContent=t.title;
-      document.getElementById('modeSelect').value=t.mode;
+      // Update mode toggle status
+      document.querySelectorAll('.mode-btn').forEach(b=>{
+        b.classList.toggle('active', b.dataset.mode === t.mode);
+      });
       if(t.mode==='text'){
         document.getElementById('languageSelect').value=t.language || 'detect';
+        document.getElementById('languageSelect').disabled = false;
       }
       applyPreviewWidth(t);
       switchEditorMode(t.mode,id);
@@ -416,7 +441,6 @@
         const focused = document.querySelector('#notesContainer textarea:focus');
         if(focused){t.cursor={noteId:focused.dataset.noteId,start:focused.selectionStart,end:focused.selectionEnd};}
       }
-      t.mode = document.getElementById('modeSelect').value;
       if(t.mode==='text') t.language = document.getElementById('languageSelect').value;
       save();
     }
@@ -489,30 +513,72 @@
       container.innerHTML='';
       if(!t.notepadData) t.notepadData=[];
       t.notepadData.forEach(note=>{
-        const wrapper=document.createElement('div');
-        wrapper.style.display='flex';
-        wrapper.style.alignItems='center';
-        wrapper.style.gap='4px';
+        const card=document.createElement('div');
+        card.className = 'note-card';
+        
+        // Title Section
+        const header=document.createElement('div');
+        header.className = 'note-header';
+        
+        const titleInput=document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'flex-1 border-none p-0 focus:ring-0 text-sm font-bold text-slate-900 bg-transparent placeholder-slate-400 outline-none';
+        titleInput.placeholder = 'Note Title (H1)';
+        titleInput.value = note.title || '';
+        titleInput.dataset.noteId = note.id;
+        titleInput.addEventListener('input',()=>{
+          note.title=titleInput.value;
+          t.content = getEditorContent();
+          save();
+        });
+
+        const del=document.createElement('button');
+        del.innerHTML='<svg class="icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        del.title='Delete note';
+        del.className='text-slate-400 hover:text-rose-500 transition-colors p-1 shrink-0';
+        del.onclick=()=>{removeNote(note.id)};
+        
+        header.appendChild(titleInput);
+        header.appendChild(del);
+
+        // Body Section
+        const body = document.createElement('div');
+        body.className = 'note-body';
+
         const ta=document.createElement('textarea');
-        ta.style.flex='1';
+        ta.className = 'note-textarea';
+        ta.placeholder = 'Start typing...';
         ta.dataset.noteId=note.id;
         ta.value=note.text;
-        ta.addEventListener('input',()=>{note.text=ta.value;save();});
-        const del=document.createElement('button');
-        del.textContent='×';
-        del.title='Delete note';
-        del.className='small';
-        del.onclick=()=>{removeNote(note.id)};
-        wrapper.appendChild(ta);
-        wrapper.appendChild(del);
-        container.appendChild(wrapper);
+        ta.rows = 1;
+        const autoResize = (el) => {
+          el.style.height = 'auto';
+          el.style.height = (el.scrollHeight) + 'px';
+        };
+        ta.addEventListener('input',()=>{
+          note.text=ta.value;
+          autoResize(ta);
+          t.content = getEditorContent();
+          save();
+        });
+        
+        body.appendChild(ta);
+        card.appendChild(header);
+        card.appendChild(body);
+        container.appendChild(card);
+        setTimeout(()=>autoResize(ta),0);
+        if(note._new){
+          delete note._new;
+          setTimeout(()=>titleInput.focus(),10);
+        }
       });
     }
     function addNote(){
       const t=tabs.find(x=>x.id===activeId);
       if(!t.notepadData) t.notepadData=[];
       const id=uid();
-      t.notepadData.push({id,text:''});
+      t.notepadData.unshift({id,title:'',text:'',_new:true}); // add to top
+      t.content = getEditorContent();
       save();
       renderNotepad();
     }
@@ -520,6 +586,7 @@
       const t=tabs.find(x=>x.id===activeId);
       if(!t.notepadData)return;
       t.notepadData=t.notepadData.filter(n=>n.id!==id);
+      t.content = getEditorContent();
       save();
       renderNotepad();
     }
@@ -531,8 +598,12 @@
       if(t.mode==='text' && ed.cm)return ed.cm.getValue();
       if(t.mode==='rich' && ed.quill)return ed.quill.root.innerHTML;
       if(t.mode==='notepad'){
-        // convert notes array to JSON
-        return JSON.stringify(t.notepadData||[]);
+        // convert notes array to Markdown joined by Level 1 headers
+        if(!t.notepadData)return'';
+        return t.notepadData.map(n=>{
+          const header = n.title ? `# ${n.title.trim()}\n` : '';
+          return (header + (n.text||'').trim()).trim();
+        }).filter(Boolean).join('\n\n');
       }
       return'';
     }
@@ -550,9 +621,43 @@
         if(ed.quill) ed.quill.root.innerHTML=content||'';
       }
       if(t.mode==='notepad'){
-        try {t.notepadData = JSON.parse(content||'[]');}catch {t.notepadData=[];}
+        // Handle conversion from Markdown or JSON
+        if(!content){
+          t.notepadData=[];
+        }else {
+          try {
+            // Check if it's old JSON format
+            const parsed = JSON.parse(content);
+            if(Array.isArray(parsed)){
+              t.notepadData = parsed;
+            }else {
+              t.notepadData = splitMarkdownToNotes(content);
+            }
+          }catch {
+            // Otherwise treat as Markdown
+            t.notepadData = splitMarkdownToNotes(content);
+          }
+        }
         renderNotepad();
       }
+    }
+
+    function splitMarkdownToNotes(markdown){
+      if(!markdown)return[];
+      // split by level 1 header "# " at start of line
+      const parts = markdown.split(/(?=^# )/m);
+      return parts.filter(p=>p.trim()).map(p=>{
+        const content = p.trim();
+        const headerMatch = content.match(/^#\s+(.*?)(\n|$)/);
+        if(headerMatch){
+          return {
+            id: uid(),
+            title: headerMatch[1].trim(),
+            text: content.substring(headerMatch[0].length).trim()
+          };
+        }
+        return {id:uid(),title:'',text:content};
+      });
     }
 
     function initCodeMirror(tabId){
@@ -698,7 +803,11 @@
       const t = tabs.find(x=>x.id===tabId);
       applyPreviewVisibility(t);
       syncPreviewToggleState();
-      document.getElementById('languageSelect').style.display = mode==='text' ? 'inline-block' : 'none';
+      const langSelect = document.getElementById('languageSelect');
+      if(langSelect){
+        langSelect.style.display = 'inline-block';
+        langSelect.disabled = mode !== 'text';
+      }
       if(mode==='text'){
         document.getElementById('textEditor').classList.add('active');
         initCodeMirror(tabId);
@@ -770,18 +879,24 @@
     // UI wiring
     document.getElementById('addTab').onclick=()=>{newTab('text')}
     document.getElementById('addNoteBtn').addEventListener('click',()=>{addNote()});
-    document.getElementById('modeSelect').addEventListener('change',e=>{
-      const t=tabs.find(x=>x.id===activeId);
-      if(t){
-        saveCurrentEditor();
-        t.mode=e.target.value;
-        if(t.mode==='text' && !t.language) t.language='plain';
-        switchEditorMode(t.mode,t.id);
-        setEditorContent(t.content);
-        save();
-        updatePreview();
-      }
-    })
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = tabs.find(x => x.id === activeId);
+        if (t) {
+          saveCurrentEditor();
+          t.mode = btn.dataset.mode;
+          if (t.mode === 'text' && !t.language) t.language = 'plain';
+          
+          // Update active button state
+          document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+          
+          switchEditorMode(t.mode, t.id);
+          setEditorContent(t.content);
+          save();
+          updatePreview();
+        }
+      });
+    });
     document.getElementById('languageSelect').addEventListener('change',e=>{
       const t=tabs.find(x=>x.id===activeId);
       if(t && t.mode==='text'){
@@ -885,7 +1000,7 @@
       switch(ev.key.toLowerCase()){
         case 's': ev.preventDefault(); exportCurrent(); break;
         case 'o': ev.preventDefault(); document.getElementById('importBtn').click(); break;
-        case 't': ev.preventDefault(); newTab(document.getElementById('modeSelect').value); break;
+        case 't': ev.preventDefault(); newTab('text'); break;
         case 'w': ev.preventDefault(); closeTab(activeId); break;
       }
     });
