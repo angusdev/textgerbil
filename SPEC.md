@@ -67,6 +67,7 @@ Global configuration includes:
 - `uid()` - generate unique identifiers.
 - `save()` / `load()` - persist and restore state from `localStorage`.
 - `renderTabs()` - redraw the tab bar.
+  While dragging a tab, the tab bar shows a snap indicator for the prospective insert position (before/after) so the target slot is visible before drop.
 - `selectTab(id)` - switch active tab, save previous state, restore cursor, and focus the editor area.
 - `newTab(mode)` / `closeTab(id)` - manage tab lifecycle.  
   `newTab` saves current editor state before switching to a newly-created tab so prior tab state is preserved.

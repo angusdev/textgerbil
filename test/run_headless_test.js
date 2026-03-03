@@ -955,6 +955,33 @@ const { JSDOM } = require('jsdom');
       assert(currentModeTab.mode === 'rich', 'Switch to rich from empty notepad happens immediately without confirmation');
       assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty notepad switch');
 
+      // Test 53: Tab drag and drop reordering
+      w.__textgerbil.newTab('text');
+      w.__textgerbil.newTab('text');
+      const startCount = w.__textgerbil.tabs.length;
+      if (startCount >= 2) {
+        const dTabs = doc.querySelectorAll('.tab.group');
+        const tab0Id = w.__textgerbil.tabs[0].id;
+        const tab1Id = w.__textgerbil.tabs[1].id;
+        
+        const dt = { effectAllowed: '', dropEffect: '' };
+        
+        const dragStart = new w.Event('dragstart');
+        dragStart.dataTransfer = dt;
+        dTabs[0].dispatchEvent(dragStart);
+        
+        const dragOver = new w.Event('dragover', { bubbles: true, cancelable: true });
+        dragOver.dataTransfer = dt;
+        dTabs[1].dispatchEvent(dragOver);
+        
+        const drop = new w.Event('drop', { bubbles: true, cancelable: true });
+        drop.dataTransfer = dt;
+        dTabs[1].dispatchEvent(drop);
+        
+        assert(w.__textgerbil.tabs[1].id === tab0Id, 'Tab 0 was dragged to index 1');
+        assert(w.__textgerbil.tabs[0].id === tab1Id, 'Tab 1 shifted to index 0');
+      }
+
     } catch (e) {
       console.error('test error', e);
       testsFailed++;
