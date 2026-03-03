@@ -790,6 +790,32 @@ const { JSDOM } = require('jsdom');
           assert(sdoc.querySelectorAll('#notesContainer textarea').length === 2, 'Derived notes are rendered in Notepad UI');
         }
       );
+
+      // Test 45: Preserve multiple notes without titles through mode switch
+      w.__textgerbil.newTab('text');
+      const switchTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(switchTestId);
+      const switchTestTab = w.__textgerbil.tabs.find(x => x.id === switchTestId);
+      
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      doc.getElementById('addNoteBtn').click(); // Note 1
+      doc.getElementById('addNoteBtn').click(); // Note 2
+      const noteTextareas = doc.querySelectorAll('#notesContainer textarea');
+      noteTextareas[0].value = 'Body 1';
+      noteTextareas[0].dispatchEvent(new w.Event('input'));
+      noteTextareas[1].value = 'Body 2';
+      noteTextareas[1].dispatchEvent(new w.Event('input'));
+      
+      assert(switchTestTab.notepadData.length === 2, 'Starting with 2 notes');
+      
+      // Switch to text
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
+      assert(switchTestTab.mode === 'text', 'Switched to text mode');
+      
+      // Switch back to notepad
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      assert(switchTestTab.mode === 'notepad', 'Switched back to notepad mode');
+      assert(switchTestTab.notepadData.length === 2, 'Still has 2 notes after switching back');
     } catch (e) {
       console.error('test error', e);
       testsFailed++;

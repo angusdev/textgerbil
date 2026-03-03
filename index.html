@@ -649,9 +649,8 @@
         // convert notes array to Markdown joined by Level 1 headers
         if(!t.notepadData)return'';
         return t.notepadData.map(n=>{
-          const header = n.title ? `# ${n.title.trim()}\n` : '';
-          return (header + (n.text||'').trim()).trim();
-        }).filter(Boolean).join('\n\n');
+          return `# ${(n.title||'').trim()}\n${(n.text||'').trim()}`.trim();
+        }).join('\n\n');
       }
       return'';
     }
