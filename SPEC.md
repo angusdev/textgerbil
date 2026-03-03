@@ -93,7 +93,7 @@ Global configuration includes:
   - other languages: preview unavailable.
 - **rich**: Quill editor with toolbar.
 - **notepad**: custom notes list, each note an independent textarea with a Markdown H1 as the title.
-- **Confirmation dialogs**: implemented via `confirmAction(title, message, onConfirm)` using the native `<dialog>` API.
+- **Confirmation dialogs**: implemented via `confirmAction(title, message, onConfirm, targetEl)` using the native `<dialog>` API. When a `targetEl` is provided, the dialog dynamically positions itself intuitively just below the clicked element (e.g., under the close tab button, delete note button, or mode toggle) instead of defaulting to the center of the screen.
 
 Mode switching is managed via **toggle buttons** in the toolbar. The transition from `notepad` to `rich` mode is guarded by a confirmation prompt to prevent unintentional data loss. The language dropdown is visible in all modes but disabled for `rich` and `notepad`. 
 The preview toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` + `iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available.
