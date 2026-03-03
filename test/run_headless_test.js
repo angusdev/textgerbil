@@ -757,6 +757,10 @@ const { JSDOM } = require('jsdom');
       const testTab = w.__textgerbil.tabs.find(x => x.id === testTabId);
       
       doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      doc.getElementById('addNoteBtn').click();
+      const firstNoteArea = doc.querySelector('#notesContainer textarea');
+      firstNoteArea.value = 'Has content';
+      firstNoteArea.dispatchEvent(new w.Event('input'));
       assert(testTab.hasBeenNotepad === true, 'hasBeenNotepad flag set when switching to notepad');
       
       const confirmDialog = doc.getElementById('confirmDialog');
@@ -916,6 +920,41 @@ const { JSDOM } = require('jsdom');
       assert(nts.length === 2, 'Two notes exist');
       assert(nts[0].value === 'First Note', 'First note stays at the top');
       assert(nts[1].value === '', 'Second note is at the bottom');
+
+      // Test 50: Bypass confirm on empty tab close
+      w.__textgerbil.newTab('text');
+      const emptyTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(emptyTabId);
+      const tabsBeforeEmptyClose = w.__textgerbil.tabs.length;
+      const activeTabBtn = doc.querySelector('.tab.border-brand-500 .close');
+      activeTabBtn.click();
+      assert(w.__textgerbil.tabs.length === tabsBeforeEmptyClose - 1, 'Empty tab closes immediately without confirmation');
+      assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty tab close');
+
+      // Test 51: Bypass confirm on empty note delete
+      w.__textgerbil.newTab('text');
+      const emptyNoteTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(emptyNoteTabId);
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      doc.getElementById('addNoteBtn').click(); // Add an empty note
+      const delBtn = doc.querySelector('.note-header button'); // Delete button
+      const notesBeforeEmptyDelete = doc.querySelectorAll('#notesContainer textarea').length;
+      delBtn.click();
+      const notesAfterEmptyDelete = doc.querySelectorAll('#notesContainer textarea').length;
+      assert(notesAfterEmptyDelete === notesBeforeEmptyDelete - 1, 'Empty note deletes immediately without confirmation');
+      assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty note delete');
+
+      // Test 52: Bypass confirm on switch to rich editor with empty notepad
+      w.__textgerbil.newTab('text');
+      const emptyRichTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(emptyRichTabId);
+      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      // It's empty now.
+      doc.querySelector('.mode-btn[data-mode="rich"]').click();
+      const currentModeTab = w.__textgerbil.tabs.find(x => x.id === emptyRichTabId);
+      assert(currentModeTab.mode === 'rich', 'Switch to rich from empty notepad happens immediately without confirmation');
+      assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty notepad switch');
+
     } catch (e) {
       console.error('test error', e);
       testsFailed++;

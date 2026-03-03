@@ -217,9 +217,9 @@
         d.style.top = (rect.bottom + 8) + 'px';
         // Try to center under button, but clamp to screen edges
         let left = rect.left + (rect.width/2) - 170; // 170 is half of 340px width
-        left = Math.max(10, Math.min(left, window.innerWidth - 350));
+        left = Math.max(10,Math.min(left,window.innerWidth - 350));
         d.style.left = left + 'px';
-      } else {
+      }else {
         d.style.margin = 'auto';
         d.style.top = '';
         d.style.left = '';
@@ -374,7 +374,7 @@
     }
 
     function renderTabs(){const el=document.getElementById('tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');const base='tab group inline-flex min-w-0 flex-initial cursor-pointer select-none items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';d.className=base+state;const titleSpan=document.createElement('span');titleSpan.className='min-w-0 truncate';titleSpan.textContent=t.title||'Untitled';d.appendChild(titleSpan);const closeSpan=document.createElement('span');closeSpan.className='close shrink-0 text-slate-400 hover:text-rose-500';closeSpan.textContent='×';closeSpan.title='Close';
-      closeSpan.onclick=(e)=>{e.stopPropagation();try {closeTab(t.id, e.currentTarget);}catch (err){console.error('closeTab error',err);}};
+      closeSpan.onclick=(e)=>{e.stopPropagation();try {closeTab(t.id,e.currentTarget);}catch (err){console.error('closeTab error',err);}};
       d.appendChild(closeSpan);d.onclick=(e)=>{if(e.detail===1)selectTab(t.id)};el.appendChild(d)})}
 
     function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Untitled',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH});activeId=tabs[0].id}}
@@ -472,10 +472,10 @@
       save();
     }
 
-    function closeTab(id, targetEl=null){
+    function closeTab(id,targetEl=null){
       const t = tabs.find(x=>x.id===id);
       const title = t ? t.title : 'Untitled';
-      confirmAction('Close Tab',`Are you sure you want to close "${title}"? Any unsaved changes will be lost permanently.`,()=>{
+      const executeClose = ()=>{
         const idx = tabs.findIndex(x=>x.id === id);
         if(idx === -1)return;
         if(editors[id]){
@@ -495,7 +495,13 @@
         save();
         renderTabs();
         if(activeId) selectTab(activeId);
-      }, targetEl);
+      };
+      const contentCleaned = (t ? t.content || '' : '').replace(/(^#\s*$|\n)/gm,'').trim();
+      if(!contentCleaned){
+        executeClose();
+      }else {
+        confirmAction('Close Tab',`Are you sure you want to close "${title}"? Any unsaved changes will be lost permanently.`,executeClose,targetEl);
+      }
     }
 
     function saveCurrentEditor(){
@@ -605,7 +611,7 @@
         del.innerHTML=`<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>`;
         del.title='Delete note';
         del.className='text-slate-400 hover:text-rose-500 transition-colors p-1 shrink-0';
-        del.onclick=(e)=>{removeNote(note.id, e.currentTarget)};
+        del.onclick=(e)=>{removeNote(note.id,e.currentTarget)};
         
         header.appendChild(titleInput);
         header.appendChild(del);
@@ -652,15 +658,21 @@
       save();
       renderNotepad();
     }
-    function removeNote(id, targetEl = null){
-      confirmAction('Delete Note','Are you sure you want to delete this note? This action cannot be undone.',()=>{
-        const t=tabs.find(x=>x.id===activeId);
-        if(!t.notepadData)return;
+    function removeNote(id,targetEl = null){
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t || !t.notepadData)return;
+      const executeRemove = ()=>{
         t.notepadData=t.notepadData.filter(n=>n.id!==id);
         t.content = getEditorContent();
         save();
         renderNotepad();
-      }, targetEl);
+      };
+      const note = t.notepadData.find(n=>n.id===id);
+      if(!note || (!note.title.trim() && !note.text.trim())){
+        executeRemove();
+      }else {
+        confirmAction('Delete Note','Are you sure you want to delete this note? This action cannot be undone.',executeRemove,targetEl);
+      }
     }
 
     function getEditorContent(){
@@ -979,10 +991,16 @@
           };
 
           if(t.hasBeenNotepad && newMode === 'rich'){
-            confirmAction('Switch to Rich Text','This tab has been in Notes mode. Switching to Rich Text mode will reset your notes and they may be lost. Do you want to continue?',()=>{
+            const contentCleaned = (t.content || '').replace(/(^#\s*$|\n)/gm,'').trim();
+            if(!contentCleaned){
               t.hasBeenNotepad = false;
               performSwitch();
-            }, btn);
+            }else {
+              confirmAction('Switch to Rich Text','This tab has been in Notes mode. Switching to Rich Text mode will reset your notes and they may be lost. Do you want to continue?',()=>{
+                t.hasBeenNotepad = false;
+                performSwitch();
+              },btn);
+            }
           }else {
             performSwitch();
           }
