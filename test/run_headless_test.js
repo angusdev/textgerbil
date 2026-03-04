@@ -955,7 +955,7 @@ const { JSDOM } = require('jsdom');
       assert(currentModeTab.mode === 'rich', 'Switch to rich from empty notepad happens immediately without confirmation');
       assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty notepad switch');
 
-      // Test 53: Tab drag and drop reordering
+      // Test 53: Tab drag reordering via pointer events
       w.__textgerbil.newTab('text');
       w.__textgerbil.newTab('text');
       const startCount = w.__textgerbil.tabs.length;
@@ -963,21 +963,19 @@ const { JSDOM } = require('jsdom');
         const dTabs = doc.querySelectorAll('.tab.group');
         const tab0Id = w.__textgerbil.tabs[0].id;
         const tab1Id = w.__textgerbil.tabs[1].id;
-        
-        const dt = { effectAllowed: '', dropEffect: '' };
-        
-        const dragStart = new w.Event('dragstart');
-        dragStart.dataTransfer = dt;
-        dTabs[0].dispatchEvent(dragStart);
-        
-        const dragOver = new w.Event('dragover', { bubbles: true, cancelable: true });
-        dragOver.dataTransfer = dt;
-        dTabs[1].dispatchEvent(dragOver);
-        
-        const drop = new w.Event('drop', { bubbles: true, cancelable: true });
-        drop.dataTransfer = dt;
-        dTabs[1].dispatchEvent(drop);
-        
+
+        const tabsBar = doc.getElementById('tabs');
+        tabsBar.getBoundingClientRect = () => ({ left: 0, right: 480, top: 0, bottom: 34, width: 480, height: 34 });
+        dTabs.forEach((tab, idx) => {
+          const left = idx * 110;
+          tab.getBoundingClientRect = () => ({ left, right: left + 100, top: 0, bottom: 34, width: 100, height: 34 });
+        });
+
+        dTabs[0].dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, clientX: 10, clientY: 10 }));
+        doc.dispatchEvent(new w.MouseEvent('pointermove', { bubbles: true, cancelable: true, clientX: 30, clientY: 10 }));
+        doc.dispatchEvent(new w.MouseEvent('pointermove', { bubbles: true, cancelable: true, clientX: 220, clientY: 10 }));
+        doc.dispatchEvent(new w.MouseEvent('pointerup', { bubbles: true, cancelable: true, clientX: 220, clientY: 10 }));
+
         assert(w.__textgerbil.tabs[1].id === tab0Id, 'Tab 0 was dragged to index 1');
         assert(w.__textgerbil.tabs[0].id === tab1Id, 'Tab 1 shifted to index 0');
       }

@@ -395,6 +395,31 @@
     let pointerGhostOffsetX = 0;
     let pointerGhostOffsetY = 0;
     let dragOriginRect = null;
+    function collectTabRects(tabEls){
+      const map = new Map();
+      tabEls.forEach(el=>{
+        map.set(el,el.getBoundingClientRect());
+      });
+      return map;
+    }
+
+    function animateTabShift(beforeMap,afterMap){
+      if(!beforeMap || !afterMap)return;
+      afterMap.forEach((afterRect,el)=>{
+        const beforeRect = beforeMap.get(el);
+        if(!beforeRect)return;
+        const dx = Math.round(beforeRect.left - afterRect.left);
+        const dy = Math.round(beforeRect.top - afterRect.top);
+        if(dx===0 && dy===0)return;
+        el.style.transition = 'none';
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(()=>{
+          el.style.transition = 'transform 0.2s ease';
+          el.style.transform = '';
+        });
+      });
+    }
+
     function clearTabSnapPreview(){
       document.querySelectorAll('.tab').forEach(tab=>{
         tab.classList.remove('drag-origin');
@@ -409,17 +434,11 @@
 
     function setTabSnapPreview(targetIndex,insertBefore,verticalBufferActive=false){
       if(targetIndex===snappedTabIndex && insertBefore===snappedBefore)return;
+      const tabElsBefore = Array.from(document.querySelectorAll('#tabs .tab'));
+      const beforeRects = collectTabRects(tabElsBefore);
       snappedTabIndex = targetIndex;
       snappedBefore = !!insertBefore;
       clearTabSnapPreview();
-      const tabEls = document.querySelectorAll('#tabs .tab');
-      if(draggedTabIndex!==null && tabEls[draggedTabIndex]){
-        tabEls[draggedTabIndex].classList.add('drag-origin');
-        tabEls[draggedTabIndex].classList.add('drag-origin-collapsed');
-      }
-      if(snappedTabIndex!==null && tabEls[snappedTabIndex]){
-        tabEls[snappedTabIndex].classList.add(snappedBefore?'snap-before':'snap-after');
-      }
       const tabsEl = document.getElementById('tabs');
       if(tabsEl){
         if(!tabDropPlaceholder){
@@ -429,13 +448,24 @@
         tabDropPlaceholder.dataset.buffered = verticalBufferActive ? 'true' : 'false';
         const placeholderWidth = Math.max(64,Math.round(draggedTabWidth || 0));
         tabDropPlaceholder.style.width = `${placeholderWidth}px`;
-        if(snappedTabIndex!==null && tabEls[snappedTabIndex]){
-          if(snappedBefore) tabsEl.insertBefore(tabDropPlaceholder,tabEls[snappedTabIndex]);
-          else tabsEl.insertBefore(tabDropPlaceholder,tabEls[snappedTabIndex].nextSibling);
+        const tabElsAfterInsertion = Array.from(tabsEl.querySelectorAll('.tab'));
+        if(snappedTabIndex!==null && tabElsAfterInsertion[snappedTabIndex]){
+          if(snappedBefore) tabsEl.insertBefore(tabDropPlaceholder,tabElsAfterInsertion[snappedTabIndex]);
+          else tabsEl.insertBefore(tabDropPlaceholder,tabElsAfterInsertion[snappedTabIndex].nextSibling);
         }else {
           tabsEl.appendChild(tabDropPlaceholder);
         }
       }
+      const tabElsAfter = Array.from(document.querySelectorAll('#tabs .tab'));
+      if(draggedTabIndex!==null && tabElsAfter[draggedTabIndex]){
+        tabElsAfter[draggedTabIndex].classList.add('drag-origin');
+        tabElsAfter[draggedTabIndex].classList.add('drag-origin-collapsed');
+      }
+      if(snappedTabIndex!==null && tabElsAfter[snappedTabIndex]){
+        tabElsAfter[snappedTabIndex].classList.add(snappedBefore?'snap-before':'snap-after');
+      }
+      const afterRects = collectTabRects(tabElsAfter);
+      animateTabShift(beforeRects,afterRects);
     }
 
     function updateTabSnapFromPointer(clientX,clientY){
