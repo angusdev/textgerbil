@@ -81,10 +81,6 @@
     .tab.drag-origin-collapsed{position:absolute !important;visibility:hidden !important;pointer-events:none !important}
     .tab-drop-placeholder{flex:0 0 auto;height:34px;min-width:64px;border:2px dashed var(--accent);border-radius:10px;background:rgb(186 230 253 / 0.4);pointer-events:none}
     .tab-drag-ghost{position:fixed;top:0;left:0;pointer-events:none;z-index:9999;box-shadow:0 10px 30px rgba(15,23,42,0.2);opacity:0.97;transform:translate3d(0,0,0);transition:none}
-    .tab.snap-before,.tab.snap-after{position:relative}
-    .tab.snap-before::before,.tab.snap-after::after{content:'';position:absolute;top:5px;bottom:5px;width:3px;background:var(--accent);border-radius:99px;box-shadow:0 0 0 2px rgb(43 139 230 / 0.18)}
-    .tab.snap-before::before{left:-6px}
-    .tab.snap-after::after{right:-6px}
     dialog::backdrop{background:rgba(15,23,42,0.5);backdrop-filter:blur(4px)}
     dialog[open]{animation:dialog-show 0.3s ease-out}
     @keyframes dialog-show{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
