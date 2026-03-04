@@ -80,6 +80,7 @@
     .tab.drag-origin{opacity:.55}
     .tab.drag-origin-collapsed{position:absolute !important;visibility:hidden !important;pointer-events:none !important}
     .tab-drop-placeholder{flex:0 0 auto;height:34px;min-width:64px;border:2px dashed var(--accent);border-radius:10px;background:rgb(186 230 253 / 0.4);pointer-events:none}
+    .tab-drag-ghost{position:fixed;top:0;left:0;pointer-events:none;z-index:9999;box-shadow:0 10px 30px rgba(15,23,42,0.2);opacity:0.97;transform:translate3d(0,0,0);transition:none}
     .tab.snap-before,.tab.snap-after{position:relative}
     .tab.snap-before::before,.tab.snap-after::after{content:'';position:absolute;top:5px;bottom:5px;width:3px;background:var(--accent);border-radius:99px;box-shadow:0 0 0 2px rgb(43 139 230 / 0.18)}
     .tab.snap-before::before{left:-6px}
@@ -385,6 +386,16 @@
     let snappedBefore = true;
     let draggedTabWidth = 0;
     let tabDropPlaceholder = null;
+    const TAB_DRAG_THRESHOLD = 6;
+    const TAB_Y_BUFFER = 30;
+    let pointerDragPointerId = null;
+    let pointerDragStartX = 0;
+    let pointerDragStartY = 0;
+    let pointerIsDragging = false;
+    let pointerDragSuppressNextClick = false;
+    let tabDragGhost = null;
+    let pointerGhostOffsetX = 0;
+    let pointerGhostOffsetY = 0;
     function clearTabSnapPreview(){
       document.querySelectorAll('.tab').forEach(tab=>{
         tab.classList.remove('drag-origin');
@@ -397,7 +408,7 @@
       }
     }
 
-    function setTabSnapPreview(targetIndex,insertBefore){
+    function setTabSnapPreview(targetIndex,insertBefore,verticalBufferActive=false){
       if(targetIndex===snappedTabIndex && insertBefore===snappedBefore)return;
       snappedTabIndex = targetIndex;
       snappedBefore = !!insertBefore;
@@ -416,6 +427,7 @@
           tabDropPlaceholder = document.createElement('div');
           tabDropPlaceholder.className = 'tab-drop-placeholder';
         }
+        tabDropPlaceholder.dataset.buffered = verticalBufferActive ? 'true' : 'false';
         const placeholderWidth = Math.max(64,Math.round(draggedTabWidth || 0));
         tabDropPlaceholder.style.width = `${placeholderWidth}px`;
         if(snappedTabIndex!==null && tabEls[snappedTabIndex]){
@@ -427,20 +439,29 @@
       }
     }
 
-    function updateTabSnapFromPointer(clientX){
+    function updateTabSnapFromPointer(clientX,clientY){
       if(draggedTabIndex===null)return;
       const tabEls = Array.from(document.querySelectorAll('#tabs .tab'));
       const candidates = tabEls.map((el,idx)=>({el,idx})).filter(item=>item.idx!==draggedTabIndex);
+      const tabsEl = document.getElementById('tabs');
+      let verticalBufferActive = false;
+      if(tabsEl && Number.isFinite(clientY)){
+        const rect = tabsEl.getBoundingClientRect();
+        const topLimit = rect.top - TAB_Y_BUFFER;
+        const bottomLimit = rect.bottom + TAB_Y_BUFFER;
+        verticalBufferActive = clientY < topLimit || clientY > bottomLimit;
+      }
       if(candidates.length===0){
-        setTabSnapPreview(draggedTabIndex,true);
+        setTabSnapPreview(draggedTabIndex,true,verticalBufferActive);
         return;
       }
+      const safeX = Number.isFinite(clientX) ? clientX : Number.POSITIVE_INFINITY;
       let targetIndex = null;
       let before = true;
       for(const item of candidates){
         const rect = item.el.getBoundingClientRect();
         const midpoint = rect.left + (rect.width/2);
-        if(clientX < midpoint){
+        if(safeX < midpoint){
           targetIndex = item.idx;
           before = true;
           break;
@@ -450,7 +471,7 @@
         targetIndex = candidates[candidates.length - 1].idx;
         before = false;
       }
-      setTabSnapPreview(targetIndex,before);
+      setTabSnapPreview(targetIndex,before,verticalBufferActive);
     }
 
     function getSnappedInsertIndex(fallbackIndex){
@@ -459,12 +480,115 @@
       return targetIndex;
     }
 
+    function beginPointerDrag(index,tabEl){
+      draggedTabIndex = index;
+      draggedTabWidth = tabEl.getBoundingClientRect().width;
+      setTabSnapPreview(index,true,false);
+      showTabDragGhost(tabEl);
+    }
+
+    function finalizePointerDrag(originIndex){
+      if(draggedTabIndex===null){
+        resetTabDragState();
+        return;
+      }
+      const insertIndex = getSnappedInsertIndex(originIndex);
+      if(insertIndex!==draggedTabIndex){
+        const moved=tabs.splice(draggedTabIndex,1)[0];
+        tabs.splice(insertIndex,0,moved);
+        save();
+        renderTabs();
+      }
+      resetTabDragState();
+      setTimeout(()=>{
+        pointerDragSuppressNextClick = false;
+      },0);
+    }
+
+    function showTabDragGhost(tabEl){
+      hideTabDragGhost();
+      if(!tabEl)return;
+      tabDragGhost = tabEl.cloneNode(true);
+      tabDragGhost.classList.add('tab-drag-ghost');
+      tabDragGhost.style.width = `${tabEl.getBoundingClientRect().width}px`;
+      tabDragGhost.style.height = `${tabEl.getBoundingClientRect().height}px`;
+      tabDragGhost.style.left = '0';
+      tabDragGhost.style.top = '0';
+      document.body.appendChild(tabDragGhost);
+      updateTabDragGhostPosition(pointerDragStartX,pointerDragStartY);
+    }
+
+    function updateTabDragGhostPosition(clientX,clientY){
+      if(!tabDragGhost)return;
+      const x = Number.isFinite(clientX) ? clientX - pointerGhostOffsetX : 0;
+      const y = Number.isFinite(clientY) ? clientY - pointerGhostOffsetY : 0;
+      tabDragGhost.style.transform = 'none';
+      tabDragGhost.style.left = `${x}px`;
+      tabDragGhost.style.top = `${y}px`;
+    }
+
+    function hideTabDragGhost(){
+      if(!tabDragGhost)return;
+      tabDragGhost.remove();
+      tabDragGhost = null;
+    }
+
+    function handleTabPointerDown(ev,index,tabEl){
+      if(ev.button!==0)return;
+      if(ev.target && ev.target.closest && ev.target.closest('.close'))return;
+      if(pointerDragPointerId!==null)return;
+      pointerDragPointerId = ev.pointerId===undefined ? null : ev.pointerId;
+      pointerDragStartX = Number.isFinite(ev.clientX) ? ev.clientX : 0;
+      pointerDragStartY = Number.isFinite(ev.clientY) ? ev.clientY : 0;
+      const tabRect = tabEl.getBoundingClientRect();
+      pointerGhostOffsetX = Number.isFinite(pointerDragStartX) ? Math.min(Math.max(pointerDragStartX - tabRect.left,0),tabRect.width) : tabRect.width / 2;
+      pointerGhostOffsetY = Number.isFinite(pointerDragStartY) ? Math.min(Math.max(pointerDragStartY - tabRect.top,0),tabRect.height) : tabRect.height / 2;
+      pointerIsDragging = false;
+      pointerDragSuppressNextClick = false;
+      const moveHandler = (moveEv)=>{
+        if(pointerDragPointerId!==null && moveEv.pointerId!==pointerDragPointerId)return;
+        const dx = Math.abs(moveEv.clientX - pointerDragStartX);
+        const dy = Math.abs(moveEv.clientY - pointerDragStartY);
+        if(!pointerIsDragging && Math.max(dx,dy) >= TAB_DRAG_THRESHOLD){
+          pointerIsDragging = true;
+          pointerDragSuppressNextClick = true;
+          beginPointerDrag(index,tabEl);
+        }
+        if(pointerIsDragging){
+          updateTabDragGhostPosition(moveEv.clientX,moveEv.clientY);
+          updateTabSnapFromPointer(moveEv.clientX,moveEv.clientY);
+          moveEv.preventDefault();
+        }
+      };
+      const endHandler = (endEv)=>{
+        if(pointerDragPointerId!==null && endEv.pointerId!==pointerDragPointerId)return;
+        document.removeEventListener('pointermove',moveHandler);
+        document.removeEventListener('pointerup',endHandler);
+        document.removeEventListener('pointercancel',endHandler);
+        pointerDragPointerId = null;
+        if(pointerIsDragging){
+          finalizePointerDrag(index);
+        }else {
+          resetTabDragState();
+        }
+      };
+      document.addEventListener('pointermove',moveHandler);
+      document.addEventListener('pointerup',endHandler);
+      document.addEventListener('pointercancel',endHandler);
+      ev.preventDefault();
+    }
+
     function resetTabDragState(){
       draggedTabIndex = null;
       snappedTabIndex = null;
       snappedBefore = true;
       draggedTabWidth = 0;
       clearTabSnapPreview();
+      hideTabDragGhost();
+      pointerDragPointerId = null;
+      pointerIsDragging = false;
+      pointerDragStartX = 0;
+      pointerDragStartY = 0;
     }
 
     function renderTabs(){
@@ -475,37 +599,7 @@
         const base='tab group inline-flex min-w-0 flex-initial cursor-pointer select-none items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';
         const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';
         d.className=base+state;
-        d.draggable=true;
-        d.ondragstart=(e)=>{
-          draggedTabIndex=i;
-          draggedTabWidth=d.getBoundingClientRect().width;
-          if(e.dataTransfer){
-            e.dataTransfer.effectAllowed='move';
-            try {e.dataTransfer.setData('text/plain',t.id||'tab');}catch {/*ignore*/}
-          }
-          d.classList.add('drag-origin');
-        };
-        d.ondragover=(e)=>{
-          if(draggedTabIndex===null)return;
-          e.preventDefault();
-          if(e.dataTransfer)e.dataTransfer.dropEffect='move';
-          if(Number.isFinite(e.clientX)) updateTabSnapFromPointer(e.clientX);
-          else setTabSnapPreview(i,false);
-        };
-        d.ondragend=()=>{resetTabDragState();};
-        d.ondrop=(e)=>{
-          e.preventDefault();
-          if(draggedTabIndex!==null){
-            const insertIndex=getSnappedInsertIndex(i);
-            if(insertIndex!==draggedTabIndex){
-              const moved=tabs.splice(draggedTabIndex,1)[0];
-              tabs.splice(insertIndex,0,moved);
-              save();
-            }
-            renderTabs();
-          }
-          resetTabDragState();
-        };
+        d.addEventListener('pointerdown',(e)=>handleTabPointerDown(e,i,d));
         const titleSpan=document.createElement('span');
         titleSpan.className='min-w-0 truncate';
         titleSpan.textContent=t.title||'Untitled';
@@ -516,27 +610,15 @@
         closeSpan.title='Close';
         closeSpan.onclick=(e)=>{e.stopPropagation();try {closeTab(t.id,e.currentTarget);}catch (err){console.error('closeTab error',err);}};
         d.appendChild(closeSpan);
-        d.onclick=(e)=>{if(e.detail===1)selectTab(t.id)};
+        d.onclick=(e)=>{
+          if(pointerDragSuppressNextClick){
+            pointerDragSuppressNextClick=false;
+            return;
+          }
+          if(e.detail===1) selectTab(t.id);
+        };
         el.appendChild(d);
       });
-      el.ondragover=(e)=>{
-        if(draggedTabIndex===null)return;
-        e.preventDefault();
-        if(e.dataTransfer)e.dataTransfer.dropEffect='move';
-        if(Number.isFinite(e.clientX)) updateTabSnapFromPointer(e.clientX);
-      };
-      el.ondrop=(e)=>{
-        if(draggedTabIndex===null)return;
-        e.preventDefault();
-        const insertIndex=getSnappedInsertIndex(draggedTabIndex);
-        if(insertIndex!==draggedTabIndex){
-          const moved=tabs.splice(draggedTabIndex,1)[0];
-          tabs.splice(insertIndex,0,moved);
-          save();
-        }
-        renderTabs();
-        resetTabDragState();
-      };
     }
 
     function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Untitled',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH});activeId=tabs[0].id}}
