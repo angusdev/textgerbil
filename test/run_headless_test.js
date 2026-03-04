@@ -134,6 +134,12 @@ const { JSDOM } = require('jsdom');
       const tabsEl = doc.getElementById('tabs');
       assert(!!tabsEl, 'Tabs container exists');
       assert(doc.getElementById('textEditor'), 'Text editor exists');
+      const editorAreaEl = doc.querySelector('.editor-area');
+      const previewEl = doc.getElementById('preview');
+      const previewHandleEl = doc.getElementById('previewResizeHandle');
+      assert(!!editorAreaEl, 'Editor area exists');
+      assert(!!previewEl && editorAreaEl.contains(previewEl), 'Preview pane is inside editor area');
+      assert(!!previewHandleEl && editorAreaEl.contains(previewHandleEl), 'Preview resize handle is inside editor area');
 
       // Test 2: Add new tab
       doc.getElementById('addTab').click();
