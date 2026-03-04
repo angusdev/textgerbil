@@ -388,14 +388,17 @@
     let tabDropPlaceholder = null;
     const TAB_DRAG_THRESHOLD = 6;
     const TAB_Y_BUFFER = 30;
+    const TAB_DRAG_ABORT_BUFFER = 50;
     let pointerDragPointerId = null;
     let pointerDragStartX = 0;
     let pointerDragStartY = 0;
     let pointerIsDragging = false;
     let pointerDragSuppressNextClick = false;
+    let pointerAbortActive = false;
     let tabDragGhost = null;
     let pointerGhostOffsetX = 0;
     let pointerGhostOffsetY = 0;
+    let dragOriginRect = null;
     function clearTabSnapPreview(){
       document.querySelectorAll('.tab').forEach(tab=>{
         tab.classList.remove('drag-origin');
@@ -449,7 +452,19 @@
         const rect = tabsEl.getBoundingClientRect();
         const topLimit = rect.top - TAB_Y_BUFFER;
         const bottomLimit = rect.bottom + TAB_Y_BUFFER;
+        const abortBottom = rect.bottom + TAB_DRAG_ABORT_BUFFER;
         verticalBufferActive = clientY < topLimit || clientY > bottomLimit;
+        if(clientY > abortBottom){
+          if(!pointerAbortActive){
+            pointerAbortActive = true;
+            updateDragGhostCursor();
+          }
+          return;
+        }
+        if(pointerAbortActive){
+          pointerAbortActive = false;
+          updateDragGhostCursor();
+        }
       }
       if(candidates.length===0){
         setTabSnapPreview(draggedTabIndex,true,verticalBufferActive);
@@ -483,6 +498,7 @@
     function beginPointerDrag(index,tabEl){
       draggedTabIndex = index;
       draggedTabWidth = tabEl.getBoundingClientRect().width;
+      dragOriginRect = tabEl.getBoundingClientRect();
       setTabSnapPreview(index,true,false);
       showTabDragGhost(tabEl);
     }
@@ -490,6 +506,18 @@
     function finalizePointerDrag(originIndex){
       if(draggedTabIndex===null){
         resetTabDragState();
+        return;
+      }
+      if(pointerAbortActive){
+        clearTabSnapPreview();
+        pointerAbortActive = false;
+        updateDragGhostCursor();
+        returnTabDragGhostToOrigin(()=>{
+          resetTabDragState();
+          setTimeout(()=>{
+            pointerDragSuppressNextClick = false;
+          },0);
+        });
         return;
       }
       const insertIndex = getSnappedInsertIndex(originIndex);
@@ -525,12 +553,53 @@
       tabDragGhost.style.transform = 'none';
       tabDragGhost.style.left = `${x}px`;
       tabDragGhost.style.top = `${y}px`;
+      tabDragGhost.style.transition = 'none';
     }
 
     function hideTabDragGhost(){
       if(!tabDragGhost)return;
       tabDragGhost.remove();
       tabDragGhost = null;
+    }
+
+    function returnTabDragGhostToOrigin(onComplete){
+      if(!tabDragGhost){
+        if(onComplete) onComplete();
+        return;
+      }
+      const targetRect = dragOriginRect;
+      if(!targetRect){
+        if(onComplete) onComplete();
+        return;
+      }
+      let didFinish = false;
+      const finish = ()=>{
+        if(didFinish)return;
+        didFinish = true;
+        tabDragGhost.removeEventListener('transitionend', onTransitionEnd);
+        tabDragGhost.style.transition = 'none';
+        tabDragGhost.style.opacity = '';
+        if(onComplete) onComplete();
+      };
+      const onTransitionEnd = (event)=>{
+        if(event.target !== tabDragGhost)return;
+        finish();
+      };
+      tabDragGhost.addEventListener('transitionend', onTransitionEnd);
+      tabDragGhost.style.transition = 'left 0.18s ease, top 0.18s ease, opacity 0.18s ease';
+      tabDragGhost.style.opacity = '0.7';
+      requestAnimationFrame(()=>{
+        tabDragGhost.style.left = `${targetRect.left}px`;
+        tabDragGhost.style.top = `${targetRect.top}px`;
+      });
+      setTimeout(finish, 220);
+    }
+
+    function updateDragGhostCursor(){
+      if(tabDragGhost){
+        tabDragGhost.style.cursor = pointerAbortActive ? 'not-allowed' : 'grabbing';
+      }
+      document.body.style.cursor = pointerAbortActive ? 'not-allowed' : '';
     }
 
     function handleTabPointerDown(ev,index,tabEl){
@@ -543,6 +612,7 @@
       const tabRect = tabEl.getBoundingClientRect();
       pointerGhostOffsetX = Number.isFinite(pointerDragStartX) ? Math.min(Math.max(pointerDragStartX - tabRect.left,0),tabRect.width) : tabRect.width / 2;
       pointerGhostOffsetY = Number.isFinite(pointerDragStartY) ? Math.min(Math.max(pointerDragStartY - tabRect.top,0),tabRect.height) : tabRect.height / 2;
+      pointerAbortActive = false;
       pointerIsDragging = false;
       pointerDragSuppressNextClick = false;
       const moveHandler = (moveEv)=>{
@@ -589,6 +659,8 @@
       pointerIsDragging = false;
       pointerDragStartX = 0;
       pointerDragStartY = 0;
+      pointerAbortActive = false;
+      dragOriginRect = null;
     }
 
     function renderTabs(){
