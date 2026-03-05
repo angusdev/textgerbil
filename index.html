@@ -1006,6 +1006,17 @@
       return `${baseTitle} ${maxSuffix + 1}`;
     }
 
+    function isMeaningfulRichContent(html){
+      if(typeof html!=='string')return false;
+      const normalized = html
+        .replace(/<p><br><\/p>/gi,'')
+        .replace(/<br\s*\/?>/gi,'')
+        .replace(/&nbsp;/gi,' ')
+        .replace(/<[^>]+>/g,'')
+        .trim();
+      return !!normalized;
+    }
+
     function newTab(mode='text'){
       saveCurrentEditor();
       let title = getDefaultTitleForMode(mode);
@@ -1056,8 +1067,10 @@
         if(activeId) selectTab(activeId);
       };
       const liveContent = (t && activeId === id && t.mode !== 'notepad') ? getEditorContent() : (t ? t.content || '' : '');
-      const contentCleaned = (liveContent || '').trim();
-      if(!contentCleaned && !hasMeaningfulNotepadContent(t)){
+      const hasMeaningfulContent = t && t.mode==='rich'
+        ? isMeaningfulRichContent(liveContent)
+        : !!((liveContent || '').trim());
+      if(!hasMeaningfulContent && !hasMeaningfulNotepadContent(t)){
         executeClose();
       }else {
         confirmAction('Close Tab',`Are you sure you want to close "${title}"? Any unsaved changes will be lost permanently.`,executeClose,targetEl);

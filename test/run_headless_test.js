@@ -273,6 +273,14 @@ const { JSDOM } = require('jsdom');
         closeActiveTabAndCheck(false, `${mode} cleared tab closes without confirmation`);
       });
 
+      const richPlaceholderTab = createModeTab('rich');
+      w.__textgerbil.selectTab(richPlaceholderTab.id);
+      const richPlaceholderEditor = w.__textgerbil.editors[richPlaceholderTab.id];
+      if (richPlaceholderEditor && richPlaceholderEditor.quill && richPlaceholderEditor.quill.root) {
+        richPlaceholderEditor.quill.root.innerHTML = '<p><br></p>';
+      }
+      closeActiveTabAndCheck(false, 'rich Quill placeholder markup closes without confirmation');
+
       // Test 3: Language switching - plain to javascript
       w.__textgerbil.selectTab(defaultAddedTab.id);
       doc.getElementById('languageSelect').value = 'javascript';
