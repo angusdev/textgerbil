@@ -749,7 +749,6 @@ const { JSDOM } = require('jsdom');
 
       checkCSP('markdown');
       checkCSP('htmlmixed');
-      checkCSP('css');
 
       // Test 42: Language dropdown order
       const langOptions = Array.from(doc.getElementById('languageSelect').options).map(o => o.text);

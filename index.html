@@ -886,13 +886,6 @@
           }else {
             pv.appendChild(buildSandboxedPreviewIframe(t.content||''));
           }
-        }else if(lang==='css'){
-          if(!canUseSecureIframePreview()){
-            renderPreviewError('Secure preview unavailable',SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
-          }else {
-            const sampleHtml = '<style>' + (t.content || '') + '</style><div><h1>Previewing styles...</h1><p>Rules applied below:</p><ul><li>List Item A</li><li>List Item B</li></ul><button style="padding:4px 8px;border-radius:4px;border:1px solid #ccc;cursor:pointer">Demo Button</button></div>';
-            pv.appendChild(buildSandboxedPreviewIframe(sampleHtml));
-          }
         }else if(lang==='json'){
           const raw=t.content||'';
           try {
@@ -1222,7 +1215,7 @@
       if(!tab || tab.mode!=='text')return false;
       let lang = tab.language;
       if(lang==='detect') lang=detectLanguageFromTitle(tab.title);
-      if(lang==='markdown' || lang==='htmlmixed' || lang==='css')return canUseSecureIframePreview();
+      if(lang==='markdown' || lang==='htmlmixed')return canUseSecureIframePreview();
       if(lang==='json')return!!window.JSONFormatter;
       return false;
     }
@@ -1292,7 +1285,7 @@
       btn.disabled=!canPreview;
       let lang = t?t.language:'plain';
       if(lang==='detect') lang=detectLanguageFromTitle(t.title);
-      const isHtmlOrMarkdown=!!(t && t.mode==='text' && (lang==='markdown' || lang==='htmlmixed' || lang==='css'));
+      const isHtmlOrMarkdown=!!(t && t.mode==='text' && (lang==='markdown' || lang==='htmlmixed'));
       const jsonReady=!!window.JSONFormatter;
       const secureReady=canUseSecureIframePreview();
       if(canPreview){
