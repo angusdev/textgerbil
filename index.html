@@ -508,10 +508,16 @@
       return true;
     }
 
+    function getDefaultTitleForMode(mode){
+      if(mode==='rich') return 'Doc';
+      if(mode==='notepad') return 'Note';
+      return 'Text';
+    }
+
     function renameTab(tabId,newTitle){
       const t=tabs.find(x=>x.id===tabId);
       if(!t)return;
-      t.title=(newTitle||'').trim()||'Untitled';
+      t.title=(newTitle||'').trim()||getDefaultTitleForMode(t.mode);
       save();
       renderTabs();
       if(activeId===tabId){
@@ -879,7 +885,7 @@
         d.appendChild(iconSpan);
         const titleSpan=document.createElement('span');
         titleSpan.className='min-w-0 truncate';
-        titleSpan.textContent=t.title||'Untitled';
+        titleSpan.textContent=t.title||getDefaultTitleForMode(t.mode);
         d.appendChild(titleSpan);
         const closeSpan=document.createElement('span');
         closeSpan.className='close shrink-0 text-slate-400 hover:text-rose-500';
@@ -898,14 +904,15 @@
       });
     }
 
-    function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Untitled',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH});activeId=tabs[0].id}}
+    function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Text',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH});activeId=tabs[0].id}}
 
     function normalizeLoadedTab(rawTab){
       if(!rawTab || typeof rawTab!=='object')return null;
       const tab = Object.assign({},rawTab);
       tab.id = tab.id || uid();
-      tab.title = (tab.title||'Untitled').toString();
       tab.mode = ['text','rich','notepad'].includes(tab.mode) ? tab.mode : 'text';
+      const fallbackTitle = tab.mode==='rich' ? 'Doc' : tab.mode==='notepad' ? 'Note' : 'Text';
+      tab.title = (tab.title||fallbackTitle).toString();
       tab.content = typeof tab.content==='string' ? tab.content : '';
       tab.theme = (tab.theme && typeof tab.theme==='object') ? tab.theme : {};
       if(tab.mode==='text'){
@@ -981,9 +988,31 @@
       }
     }
 
+    function getNextModeTabTitle(mode,baseTitle){
+      let maxSuffix = -1;
+      tabs.forEach(tab=>{
+        if(!tab || tab.mode!==mode)return;
+        const title = typeof tab.title==='string' ? tab.title.trim() : '';
+        if(title === baseTitle){
+          maxSuffix = Math.max(maxSuffix,0);
+          return;
+        }
+        const match = title.match(new RegExp(`^${baseTitle}\\s+(\\d+)$`));
+        if(!match)return;
+        const suffix = Number.parseInt(match[1],10);
+        if(Number.isFinite(suffix)) maxSuffix = Math.max(maxSuffix,suffix);
+      });
+      if(maxSuffix < 0) return baseTitle;
+      return `${baseTitle} ${maxSuffix + 1}`;
+    }
+
     function newTab(mode='text'){
       saveCurrentEditor();
-      const t={id:uid(),title:'Untitled',mode,language:'detect',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
+      let title = getDefaultTitleForMode(mode);
+      if(mode==='text') title = getNextModeTabTitle('text','Text');
+      else if(mode==='rich') title = getNextModeTabTitle('rich','Doc');
+      else if(mode==='notepad') title = getNextModeTabTitle('notepad','Note');
+      const t={id:uid(),title,mode,language:'detect',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
       if(mode==='notepad') t.notepadData=[];
       if(globalTheme){t.theme=Object.assign({},globalTheme);} // inherit global
       tabs.push(t);
@@ -995,7 +1024,7 @@
 
     function closeTab(id,targetEl=null){
       const t = tabs.find(x=>x.id===id);
-      const title = t ? t.title : 'Untitled';
+      const title = t ? t.title : getDefaultTitleForMode(t && t.mode);
       const hasMeaningfulNotepadContent = (tab)=>{
         if(!tab || tab.mode!=='notepad' || !Array.isArray(tab.notepadData))return false;
         return tab.notepadData.some(note=>{

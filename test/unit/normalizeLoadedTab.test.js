@@ -20,7 +20,7 @@ try {
   const raw2 = {};
   const norm2 = normalizeLoadedTab(raw2);
   assert(norm2.id, 'Should generate a new ID if missing');
-  assert.strictEqual(norm2.title, 'Untitled');
+  assert.strictEqual(norm2.title, 'Text');
   assert.strictEqual(norm2.mode, 'text');
 
   // Test Case 3: Invalid mode

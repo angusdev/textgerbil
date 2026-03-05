@@ -190,6 +190,7 @@ const { JSDOM } = require('jsdom');
       const tabsEl = doc.getElementById('tabs');
       assert(!!tabsEl, 'Tabs container exists');
       assert(doc.getElementById('textEditor'), 'Text editor exists');
+      assert(w.__textgerbil.tabs[0] && w.__textgerbil.tabs[0].title === 'Text', 'Initial default text tab is named Text');
       const editorAreaEl = doc.querySelector('.editor-area');
       const previewEl = doc.getElementById('preview');
       const previewHandleEl = doc.getElementById('previewResizeHandle');
@@ -205,6 +206,7 @@ const { JSDOM } = require('jsdom');
       assert(afterAddCount >= 1, `Tabs still exist after add (found ${afterAddCount})`);
       assert(w.__textgerbil.tabs.length === tabsBeforeDefaultAdd + 1, 'Default add button creates one tab');
       assert(defaultAddedTab && defaultAddedTab.mode === 'text', 'Default add button creates text mode tab');
+      assert(defaultAddedTab && defaultAddedTab.title === 'Text 1', 'Default add button names next text tab Text 1');
 
       // Test 2b: Add tabs from dropdown for all three modes
       const addToggleBtn = doc.getElementById('addTabToggle');
@@ -222,6 +224,39 @@ const { JSDOM } = require('jsdom');
         assert(w.__textgerbil.tabs.length === countBefore + 1, `Dropdown add creates one ${mode} tab`);
         assert(added && added.mode === mode, `Dropdown add sets mode to ${mode}`);
       });
+
+      // Test 2b-1: Text tabs use Text / Text N naming with max suffix + 1
+      const textTitles = w.__textgerbil.tabs
+        .filter(tab => tab.mode === 'text')
+        .map(tab => tab.title);
+      assert(textTitles.includes('Text 1'), 'Second text tab is named Text 1');
+      const firstNamedText = w.__textgerbil.tabs.find(tab => tab.mode === 'text' && tab.title === 'Text');
+      if (firstNamedText) firstNamedText.title = 'Text 4';
+      w.__textgerbil.newTab('text');
+      const nextNamedText = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
+      assert(nextNamedText && nextNamedText.title === 'Text 5', 'New text tab uses highest existing Text suffix plus one');
+
+      // Test 2b-2: Rich tabs use Doc / Doc N naming with max suffix + 1
+      const richTitles = w.__textgerbil.tabs
+        .filter(tab => tab.mode === 'rich')
+        .map(tab => tab.title);
+      assert(richTitles.includes('Doc'), 'First rich tab is named Doc');
+      const firstNamedDoc = w.__textgerbil.tabs.find(tab => tab.mode === 'rich' && tab.title === 'Doc');
+      if (firstNamedDoc) firstNamedDoc.title = 'Doc 6';
+      w.__textgerbil.newTab('rich');
+      const nextNamedDoc = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
+      assert(nextNamedDoc && nextNamedDoc.title === 'Doc 7', 'New rich tab uses highest existing Doc suffix plus one');
+
+      // Test 2b-3: Notepad tabs use Note / Note N naming with max suffix + 1
+      const noteTitles = w.__textgerbil.tabs
+        .filter(tab => tab.mode === 'notepad')
+        .map(tab => tab.title);
+      assert(noteTitles.includes('Note'), 'First notepad tab is named Note');
+      const firstNamedNote = w.__textgerbil.tabs.find(tab => tab.mode === 'notepad' && tab.title === 'Note');
+      if (firstNamedNote) firstNamedNote.title = 'Note 2';
+      w.__textgerbil.newTab('notepad');
+      const secondNamedNote = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
+      assert(secondNamedNote && secondNamedNote.title === 'Note 3', 'New notepad tab uses highest existing Note suffix plus one');
 
       // Test 2c: Close-confirm behavior for all three modes
       ['text', 'rich', 'notepad'].forEach(mode => {
