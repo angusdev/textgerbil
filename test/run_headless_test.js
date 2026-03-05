@@ -390,7 +390,28 @@ const { JSDOM } = require('jsdom');
         assert(false, 'No #tabTitle found for UI rename test');
       }
 
-      // Test 30: Tab in tab bar should NOT be editable on double-click
+      // Test 31: Emoji picker inserts emoji into active edit input
+      const emojiBtn = doc.getElementById('emojiBtn');
+      const titleForEmoji = doc.getElementById('tabTitle');
+      if (emojiBtn && titleForEmoji) {
+        titleForEmoji.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+        const emojiInput = titleForEmoji.querySelector('input');
+        assert(!!emojiInput, 'Title input available for emoji insertion');
+        if (emojiInput) {
+          emojiInput.value = 'Hello';
+          emojiInput.focus();
+          emojiInput.setSelectionRange(emojiInput.value.length, emojiInput.value.length);
+          emojiBtn.click();
+          const firstEmoji = doc.querySelector('#emojiPicker .emoji-item');
+          if (firstEmoji) firstEmoji.click();
+          assert(emojiInput.value.length > 'Hello'.length, 'Emoji picker appends emoji into active input');
+          emojiInput.dispatchEvent(new w.KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+        }
+      } else {
+        assert(false, 'Emoji button or tab title missing for emoji test');
+      }
+
+      // Test 32: Tab in tab bar should NOT be editable on double-click
       const firstTabEl = doc.querySelector('.tab');
       if (firstTabEl) {
         const titleSpan = firstTabEl.querySelector('span:first-child');
@@ -412,7 +433,7 @@ const { JSDOM } = require('jsdom');
       }
       const editorsBefore = Object.keys(w.__textgerbil.editors).length;
 
-      // Test 31: Close tab via UI button
+      // Test 33: Close tab via UI button
       const closeBtn = doc.querySelector('.tab .close');
       if (closeBtn) {
         closeBtn.click();
