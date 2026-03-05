@@ -129,6 +129,62 @@ const { JSDOM } = require('jsdom');
           scenarioDom.window.close();
         }
       };
+      const getActiveCloseButton = () => doc.querySelector('.tab.border-brand-500 .close');
+      const closeActiveTabAndCheck = (shouldConfirm, message) => {
+        const beforeCount = w.__textgerbil.tabs.length;
+        const confirmDialog = doc.getElementById('confirmDialog');
+        const closeBtn = getActiveCloseButton();
+        assert(!!closeBtn, `${message}: active close button exists`);
+        if (!closeBtn) return;
+        closeBtn.click();
+        assert(confirmDialog.open === shouldConfirm, message);
+        if (shouldConfirm) {
+          doc.getElementById('dialogConfirm').click();
+          assert(confirmDialog.open === false, `${message}: dialog closes after confirm`);
+        }
+        assert(w.__textgerbil.tabs.length === beforeCount - 1, `${message}: tab closes`);
+      };
+      const createModeTab = (mode) => {
+        w.__textgerbil.newTab(mode);
+        return w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
+      };
+      const editModeTab = (tab, mode, value) => {
+        w.__textgerbil.selectTab(tab.id);
+        if (mode === 'text') {
+          const ed = w.__textgerbil.editors[tab.id];
+          if (ed && ed.cm) ed.cm.setValue(value);
+          return;
+        }
+        if (mode === 'rich') {
+          const ed = w.__textgerbil.editors[tab.id];
+          if (ed && ed.quill && ed.quill.root) ed.quill.root.innerHTML = value;
+          return;
+        }
+        doc.getElementById('addNoteBtn').click();
+        const note = doc.querySelector('#notesContainer textarea');
+        if (note) {
+          note.value = value;
+          note.dispatchEvent(new w.Event('input'));
+        }
+      };
+      const clearModeTab = (tab, mode) => {
+        w.__textgerbil.selectTab(tab.id);
+        if (mode === 'text') {
+          const ed = w.__textgerbil.editors[tab.id];
+          if (ed && ed.cm) ed.cm.setValue('');
+          return;
+        }
+        if (mode === 'rich') {
+          const ed = w.__textgerbil.editors[tab.id];
+          if (ed && ed.quill && ed.quill.root) ed.quill.root.innerHTML = '';
+          return;
+        }
+        const delBtn = doc.querySelector('.note-header button');
+        if (!delBtn) return;
+        delBtn.click();
+        const confirmDialog = doc.getElementById('confirmDialog');
+        if (confirmDialog.open) doc.getElementById('dialogConfirm').click();
+      };
 
       // Test 1: Initial state
       const tabsEl = doc.getElementById('tabs');
@@ -141,15 +197,52 @@ const { JSDOM } = require('jsdom');
       assert(!!previewEl && editorAreaEl.contains(previewEl), 'Preview pane is inside editor area');
       assert(!!previewHandleEl && editorAreaEl.contains(previewHandleEl), 'Preview resize handle is inside editor area');
 
-      // Test 2: Add new tab
-      doc.getElementById('addTab').click();
+      // Test 2: Add default tab (text mode) from split button
+      const tabsBeforeDefaultAdd = w.__textgerbil.tabs.length;
+      doc.getElementById('addTabDefault').click();
       const afterAddCount = doc.getElementById('tabs')?.children?.length || 0;
+      const defaultAddedTab = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
       assert(afterAddCount >= 1, `Tabs still exist after add (found ${afterAddCount})`);
+      assert(w.__textgerbil.tabs.length === tabsBeforeDefaultAdd + 1, 'Default add button creates one tab');
+      assert(defaultAddedTab && defaultAddedTab.mode === 'text', 'Default add button creates text mode tab');
+
+      // Test 2b: Add tabs from dropdown for all three modes
+      const addToggleBtn = doc.getElementById('addTabToggle');
+      const addMenuEl = doc.getElementById('addTabMenu');
+      const openAddMenu = () => {
+        if (addMenuEl && addMenuEl.classList.contains('hidden')) addToggleBtn.click();
+      };
+      ['text', 'rich', 'notepad'].forEach(mode => {
+        const countBefore = w.__textgerbil.tabs.length;
+        openAddMenu();
+        const opt = doc.querySelector(`#addTabMenu .add-tab-option[data-mode="${mode}"]`);
+        assert(!!opt, `Dropdown option exists for ${mode}`);
+        if (opt) opt.click();
+        const added = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
+        assert(w.__textgerbil.tabs.length === countBefore + 1, `Dropdown add creates one ${mode} tab`);
+        assert(added && added.mode === mode, `Dropdown add sets mode to ${mode}`);
+      });
+
+      // Test 2c: Close-confirm behavior for all three modes
+      ['text', 'rich', 'notepad'].forEach(mode => {
+        const emptyTab = createModeTab(mode);
+        closeActiveTabAndCheck(false, `${mode} empty tab closes without confirmation`);
+
+        const editedTab = createModeTab(mode);
+        editModeTab(editedTab, mode, mode === 'rich' ? '<p>edited</p>' : 'edited');
+        closeActiveTabAndCheck(true, `${mode} edited tab requires confirmation`);
+
+        const clearedTab = createModeTab(mode);
+        editModeTab(clearedTab, mode, mode === 'rich' ? '<p>edited</p>' : 'edited');
+        clearModeTab(clearedTab, mode);
+        closeActiveTabAndCheck(false, `${mode} cleared tab closes without confirmation`);
+      });
 
       // Test 3: Language switching - plain to javascript
+      w.__textgerbil.selectTab(defaultAddedTab.id);
       doc.getElementById('languageSelect').value = 'javascript';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
-      const activeTabIdForLanguageTests = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      const activeTabIdForLanguageTests = defaultAddedTab.id;
       const t = w.__textgerbil.tabs.find(x => x.id === activeTabIdForLanguageTests);
       assert(t && t.language === 'javascript', 'Language switched to javascript');
 
@@ -186,36 +279,12 @@ const { JSDOM } = require('jsdom');
       const htmlDetected = w.__textgerbil.detectLanguageFromTitle('page.html');
       assert(htmlDetected === 'htmlmixed', 'Auto-detects HTML from .html extension');
 
-      // Test 10: Mode switching - text to rich
-      doc.querySelector('.mode-btn[data-mode="rich"]').click();
-      assert(doc.getElementById('richEditor').classList.contains('active'), 'Rich editor activated');
-
-      // Test 11: Mode switching - rich to notepad
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      assert(doc.getElementById('notepadEditor').classList.contains('active'), 'Notepad editor activated');
-
-      // Test 12: Notepad - add notes
-      const addNoteBtnForAutosave = doc.getElementById('addNoteBtn');
-      addNoteBtnForAutosave.click();
-      const notes = doc.querySelectorAll('#notesContainer textarea');
-      assert(notes.length === 1, 'Note added to notepad');
-
-      // Test 13: Notepad - edit note
-      notes[0].value = 'Test note';
-      notes[0].dispatchEvent(new w.Event('input'));
-      assert(notes[0].value === 'Test note', 'Note edited');
-
-      // Test 14: Notepad - add another note
-      addNoteBtnForAutosave.click();
-      const notesAfter = doc.querySelectorAll('#notesContainer textarea');
-      assert(notesAfter.length === 2, 'Second note added');
-
-      // Test 15: Theme settings - open panel
+      // Test 10: Theme settings - open panel
       doc.getElementById('themeBtn').click();
       const settingsPanel = doc.getElementById('settingsPanel');
       assert(settingsPanel.style.display === 'block', 'Settings panel opens');
 
-      // Test 16: Theme settings - set values
+      // Test 11: Theme settings - set values
       doc.getElementById('fontFamily').value = 'monospace';
       doc.getElementById('fontSize').value = '16';
       doc.getElementById('bgColor').value = '#000000';
@@ -223,7 +292,7 @@ const { JSDOM } = require('jsdom');
       doc.getElementById('applyTheme').click();
       assert(true, 'Theme applied to current tab without error');
 
-      // Test 17: Autosave on tab switch (content persisted)
+      // Test 12: Autosave on tab switch (content persisted)
       w.__textgerbil.newTab('text');
       const switchSourceId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(switchSourceId);
@@ -239,9 +308,8 @@ const { JSDOM } = require('jsdom');
       assert(writesAfterSwitch > writesBeforeSwitch, 'Switching tab triggers autosave');
       assert(switchSaved && switchSaved.activeId === switchTargetId, 'Tab switch saves active tab selection');
 
-      // Test 18: Autosave on file type/language change
+      // Test 13: Autosave on file type/language change
       w.__textgerbil.selectTab(switchSourceId);
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
       doc.getElementById('languageSelect').value = 'python';
       const writesBeforeLanguage = getWriteCount(STORAGE_KEY);
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
@@ -250,7 +318,7 @@ const { JSDOM } = require('jsdom');
       assert(getWriteCount(STORAGE_KEY) > writesBeforeLanguage, 'Language change triggers autosave');
       assert(langTab && langTab.language === 'python', 'Language change persisted');
 
-      // Test 18b: languageSelect specifically saves on each change
+      // Test 13b: languageSelect specifically saves on each change
       const writesBeforeLanguageSecond = getWriteCount(STORAGE_KEY);
       doc.getElementById('languageSelect').value = 'markdown';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
@@ -259,16 +327,7 @@ const { JSDOM } = require('jsdom');
       assert(getWriteCount(STORAGE_KEY) > writesBeforeLanguageSecond, 'languageSelect change triggers save');
       assert(langTabSecond && langTabSecond.language === 'markdown', 'languageSelect value persisted');
 
-      // Test 19: Autosave on edit mode change (text -> rich)
-      const writesBeforeMode = getWriteCount(STORAGE_KEY);
-      doc.querySelector('.mode-btn[data-mode="rich"]').click();
-      const modeSaved = getSavedState();
-      const modeTab = modeSaved && modeSaved.tabs && modeSaved.tabs.find(x => x.id === switchSourceId);
-      assert(getWriteCount(STORAGE_KEY) > writesBeforeMode, 'Mode change triggers autosave');
-      assert(modeTab && modeTab.mode === 'rich', 'Mode change persisted');
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
-
-      // Test 20: Autosave on current-tab theme setting apply
+      // Test 14: Autosave on current-tab theme setting apply
       doc.getElementById('fontFamily').value = 'Courier New';
       doc.getElementById('fontSize').value = '18';
       doc.getElementById('bgColor').value = '#101010';
@@ -280,7 +339,7 @@ const { JSDOM } = require('jsdom');
       assert(getWriteCount(STORAGE_KEY) > writesBeforeTheme, 'Apply theme triggers autosave');
       assert(themeTab && themeTab.theme && themeTab.theme.fontFamily === 'Courier New', 'Current-tab theme persisted');
 
-      // Test 21: Autosave on global settings apply
+      // Test 15: Autosave on global settings apply
       doc.getElementById('fontFamily').value = 'serif';
       doc.getElementById('fontSize').value = '15';
       const writesBeforeGlobalTabs = getWriteCount(STORAGE_KEY);
@@ -289,7 +348,7 @@ const { JSDOM } = require('jsdom');
       assert(getWriteCount(STORAGE_KEY) > writesBeforeGlobalTabs, 'Apply global triggers tab-state autosave');
       assert(getWriteCount(STORAGE_GLOBAL) > writesBeforeGlobalTheme, 'Apply global triggers global-theme autosave');
 
-      // Test 22: Autosave on rename tab (Enter)
+      // Test 16: Autosave on rename tab (Enter)
       const tabTitleEl = doc.getElementById('tabTitle');
       if (tabTitleEl) {
         const renameWritesBefore = getWriteCount(STORAGE_KEY);
@@ -302,7 +361,7 @@ const { JSDOM } = require('jsdom');
         assert(getWriteCount(STORAGE_KEY) > renameWritesBefore, 'Rename via Enter triggers autosave');
       }
 
-      // Test 23: Autosave on rename tab (blur)
+      // Test 17: Autosave on rename tab (blur)
       const tabTitleBlurEl = doc.getElementById('tabTitle');
       if (tabTitleBlurEl) {
         const renameWritesBeforeBlur = getWriteCount(STORAGE_KEY);
@@ -315,8 +374,10 @@ const { JSDOM } = require('jsdom');
         assert(getWriteCount(STORAGE_KEY) > renameWritesBeforeBlur, 'Rename via blur triggers autosave');
       }
 
-      // Test 24: Autosave on notepad edit
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
+      // Test 18: Autosave on notepad edit
+      w.__textgerbil.newTab('notepad');
+      const noteAutosaveTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(noteAutosaveTabId);
       const addNoteBtn = doc.getElementById('addNoteBtn');
       addNoteBtn.click();
       const noteForSave = doc.querySelector('#notesContainer textarea');
@@ -326,9 +387,8 @@ const { JSDOM } = require('jsdom');
         noteForSave.dispatchEvent(new w.Event('input'));
       }
       assert(getWriteCount(STORAGE_KEY) > writesBeforeNoteEdit, 'Notepad edit triggers autosave');
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
 
-      // Test 25: Tab switching
+      // Test 19: Tab switching
       const tabs = doc.querySelectorAll('.tab');
       assert(tabs.length >= 1, `Tabs exist (found ${tabs.length})`);
       if (tabs.length >= 1) {
@@ -336,7 +396,7 @@ const { JSDOM } = require('jsdom');
         assert(true, 'Tab switched without error');
       }
 
-      // Test 26: Preview defaults off and is remembered per tab
+      // Test 20: Preview defaults off and is remembered per tab
       const previewSidebar = doc.getElementById('preview');
       w.__textgerbil.newTab('text');
       const firstPreviewTab = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
@@ -359,21 +419,20 @@ const { JSDOM } = require('jsdom');
       w.__textgerbil.selectTab(secondPreviewTab.id);
       assert(w.__textgerbil.getActiveTabPreviewWidth() === 300, 'Tab B remembers custom preview width');
 
-      // Test 27: Export function
+      // Test 21: Export function
       assert(typeof w.__textgerbil.exportCurrent === 'function', 'Export function exposed');
 
-      // Test 28: Global state accessible
+      // Test 22: Global state accessible
       assert(Array.isArray(w.__textgerbil.tabs), 'Tabs array accessible');
       assert(typeof w.__textgerbil.save === 'function', 'Save function accessible');
       assert(typeof w.__textgerbil.load === 'function', 'Load function accessible');
 
-      // Test 29: Keyboard shortcut simulation
+      // Test 23: Keyboard shortcut simulation
       const keydownEvent = new w.KeyboardEvent('keydown', { key: 't', ctrlKey: true });
       doc.dispatchEvent(keydownEvent);
       assert(true, 'Keyboard shortcut handler runs without error');
 
-      // Test 30: Rename tab (via UI double-click)
-      // Test 29: Tab title double-click replacement in UI (main title)
+      // Test 24: Tab title double-click replacement in UI (main title)
       const titleToTest = doc.getElementById('tabTitle');
       if (titleToTest) {
         const dblClickEvent = new w.MouseEvent('dblclick', { bubbles: true });
@@ -390,7 +449,7 @@ const { JSDOM } = require('jsdom');
         assert(false, 'No #tabTitle found for UI rename test');
       }
 
-      // Test 31: Emoji picker inserts emoji into active edit input
+      // Test 25: Emoji picker inserts emoji into active edit input
       const emojiBtn = doc.getElementById('emojiBtn');
       const titleForEmoji = doc.getElementById('tabTitle');
       if (emojiBtn && titleForEmoji) {
@@ -411,7 +470,7 @@ const { JSDOM } = require('jsdom');
         assert(false, 'Emoji button or tab title missing for emoji test');
       }
 
-      // Test 32: Tab in tab bar should NOT be editable on double-click
+      // Test 26: Tab in tab bar should NOT be editable on double-click
       const firstTabEl = doc.querySelector('.tab');
       if (firstTabEl) {
         const titleSpan = firstTabEl.querySelector('span:first-child');
@@ -422,8 +481,7 @@ const { JSDOM } = require('jsdom');
         }
       }
 
-      // Prior to closing, make sure we're in text mode (CodeMirror) and focus editor
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
+      // Prior to closing, focus editor if available
       const currentTabId = w.__textgerbil.tabs[0] && w.__textgerbil.tabs[0].id;
       if (currentTabId) {
         const edInst = w.__textgerbil.editors[currentTabId];
@@ -433,7 +491,7 @@ const { JSDOM } = require('jsdom');
       }
       const editorsBefore = Object.keys(w.__textgerbil.editors).length;
 
-      // Test 33: Close tab via UI button
+      // Test 27: Close tab via UI button
       const closeBtn = doc.querySelector('.tab .close');
       if (closeBtn) {
         closeBtn.click();
@@ -447,7 +505,7 @@ const { JSDOM } = require('jsdom');
         assert(false, 'No close button found for close test');
       }
 
-      // Test 32: Initialize tabs and per-tab settings from localStorage (full settings)
+      // Test 28: Initialize tabs and per-tab settings from localStorage (full settings)
       await runLocalStorageInitScenario(
         'init-full-settings',
         {
@@ -461,8 +519,7 @@ const { JSDOM } = require('jsdom');
                 content: '# Alpha',
                 theme: { fontFamily: 'serif', fontSize: 13, bg: '#fafafa', fg: '#111111' },
                 previewVisible: true,
-                previewWidth: 480,
-                hasBeenNotepad: true
+                previewWidth: 480
               },
               {
                 id: 'tab-beta',
@@ -482,13 +539,10 @@ const { JSDOM } = require('jsdom');
           assert(sw.__textgerbil.tabs.length === 2, 'Init from storage restores tab count');
           assert(sdoc.querySelectorAll('.tab').length === 2, 'Init from storage renders tab bar entries');
           assert(sdoc.getElementById('tabTitle').textContent === 'Notes', 'Init from storage restores active tab');
-          // In restored state, button might not be 'active' class yet because selectTab is called
           assert(sw.__textgerbil.tabs.find(x=>x.id==='tab-beta').mode === 'notepad', 'Init from storage restores active tab mode');
-          assert(sdoc.querySelectorAll('#notesContainer textarea').length === 2, 'Init from storage restores notepad notes');
           const restoredActive = sw.__textgerbil.tabs.find(x => x.id === 'tab-beta');
           assert(restoredActive && restoredActive.theme && restoredActive.theme.fontFamily === 'monospace', 'Init keeps per-tab theme from storage');
           assert(restoredActive && restoredActive.previewWidth === 300, 'Init restores per-tab preview width from storage');
-          assert(sw.__textgerbil.tabs.find(x=>x.id==='tab-alpha').hasBeenNotepad === true, 'Init restores hasBeenNotepad flag');
           assert(sw.__textgerbil.globalTheme && sw.__textgerbil.globalTheme.fontFamily === 'cursive', 'Init restores global theme from storage');
           assert(sdoc.getElementById('notesContainer').style.fontFamily === 'monospace', 'Init applies restored active tab theme');
           sw.__textgerbil.selectTab('tab-alpha');
@@ -497,7 +551,7 @@ const { JSDOM } = require('jsdom');
         }
       );
 
-      // Test 33: Initialize with empty saved tabs should still create one tab
+      // Test 29: Initialize with empty saved tabs should still create one tab
       await runLocalStorageInitScenario(
         'init-empty-tabs',
         { [STORAGE_KEY]: JSON.stringify({ tabs: [], activeId: null }) },
@@ -507,7 +561,7 @@ const { JSDOM } = require('jsdom');
         }
       );
 
-      // Test 34: Initialize with invalid activeId should select first available tab
+      // Test 30: Initialize with invalid activeId should select first available tab
       await runLocalStorageInitScenario(
         'init-invalid-active-id',
         {
@@ -526,7 +580,7 @@ const { JSDOM } = require('jsdom');
         }
       );
 
-      // Test 35: Initialize defaults for missing tab fields
+      // Test 31: Initialize defaults for missing tab fields
       await runLocalStorageInitScenario(
         'init-missing-fields',
         {
@@ -544,7 +598,7 @@ const { JSDOM } = require('jsdom');
         }
       );
 
-      // Test 36: Initialize text content and text cursor from localStorage
+      // Test 32: Initialize text content and text cursor from localStorage
       await runLocalStorageInitScenario(
         'init-text-content-cursor',
         {
@@ -573,7 +627,7 @@ const { JSDOM } = require('jsdom');
         }
       );
 
-      // Test 37: Initialize rich content from localStorage
+      // Test 33: Initialize rich content from localStorage
       await runLocalStorageInitScenario(
         'init-rich-content',
         {
@@ -599,32 +653,7 @@ const { JSDOM } = require('jsdom');
         }
       );
 
-      // Test 38: Initialize notepad cursor from localStorage
-      await runLocalStorageInitScenario(
-        'init-notepad-cursor',
-        {
-          [STORAGE_KEY]: JSON.stringify({
-            tabs: [{
-              id: 'np-tab',
-              title: 'notes',
-              mode: 'notepad',
-              content: JSON.stringify([{ id: 'a', text: 'first note' }, { id: 'b', text: 'second note' }]),
-              theme: {},
-              previewVisible: false,
-              cursor: { noteId: 'b', start: 2, end: 6 }
-            }],
-            activeId: 'np-tab'
-          })
-        },
-        async (_sw, sdoc) => {
-          await new Promise(resolve => setTimeout(resolve, 180));
-          const focused = sdoc.activeElement;
-          assert(focused && focused.tagName === 'TEXTAREA' && focused.dataset.noteId === 'b', 'Init restores notepad focused note from cursor');
-          assert(focused && focused.selectionStart === 2 && focused.selectionEnd === 6, 'Init restores notepad cursor range');
-        }
-      );
-
-      // Test 39: Switch tab restores text cursor and focuses editor
+      // Test 34: Switch tab restores text cursor and focuses editor
       w.__textgerbil.newTab('text');
       const focusSourceId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(focusSourceId);
@@ -648,13 +677,39 @@ const { JSDOM } = require('jsdom');
         'Tab switch focuses text editor area'
       );
 
-      // Test 40: Preview security behavior and availability by language
+      // Test 35: Switch tab restores rich selection and focuses editor
+      w.__textgerbil.newTab('rich');
+      const richFocusSourceId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(richFocusSourceId);
+      const richSourceEd = w.__textgerbil.editors[richFocusSourceId] && w.__textgerbil.editors[richFocusSourceId].quill;
+      if (richSourceEd && richSourceEd.root) {
+        richSourceEd.root.innerHTML = '<p>rich cursor restore</p>';
+        if (typeof richSourceEd.setSelection === 'function') richSourceEd.setSelection(4, 2);
+      }
+      w.__textgerbil.newTab('text');
+      const richFocusTargetId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(richFocusTargetId);
+      w.__textgerbil.selectTab(richFocusSourceId);
+      await new Promise(resolve => setTimeout(resolve, 90));
+      const restoredRichEd = w.__textgerbil.editors[richFocusSourceId] && w.__textgerbil.editors[richFocusSourceId].quill;
+      const restoredRichSelection = restoredRichEd && typeof restoredRichEd.getSelection === 'function' ? restoredRichEd.getSelection() : null;
+      assert(
+        restoredRichSelection && restoredRichSelection.index === 4 && restoredRichSelection.length === 2,
+        'Tab switch restores previous rich selection'
+      );
+      assert(
+        w.__TEXTGERBIL_HEADLESS_LAST_FOCUS &&
+          w.__TEXTGERBIL_HEADLESS_LAST_FOCUS.tabId === richFocusSourceId &&
+          w.__TEXTGERBIL_HEADLESS_LAST_FOCUS.mode === 'rich',
+        'Tab switch focuses rich editor area'
+      );
+
+      // Test 36: Preview security behavior and availability by language
       const previewToggle = doc.getElementById('togglePreview');
       const previewPanel = doc.getElementById('preview');
       const previewContent = doc.getElementById('previewContent');
       const previewTabId = focusSourceId;
       w.__textgerbil.selectTab(previewTabId);
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
       w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: true, supportsSandbox: true });
       const mainLayout = doc.querySelector('main');
       if (mainLayout) {
@@ -776,225 +831,7 @@ const { JSDOM } = require('jsdom');
       const expectedOrder = ['Detect', 'Plain', 'CSS', 'HTML', 'Java', 'JavaScript', 'JSON', 'Markdown', 'Python', 'Shell', 'SQL', 'XML', 'YAML'];
       assert(JSON.stringify(langOptions) === JSON.stringify(expectedOrder), 'Language dropdown order is correct (Detect, Plain, then Alphabetical)');
 
-      // Test 43: Rich empty markup normalizes to blank content
-      w.__textgerbil.newTab('text');
-      const richEmptyTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(richEmptyTabId);
-      const richEmptyTab = w.__textgerbil.tabs.find(x => x.id === richEmptyTabId);
-      doc.querySelector('.mode-btn[data-mode="rich"]').click();
-      const richEmptyEditor = w.__textgerbil.editors[richEmptyTabId] && w.__textgerbil.editors[richEmptyTabId].quill;
-      if (richEmptyEditor && richEmptyEditor.root) {
-        richEmptyEditor.root.innerHTML = '<p><br></p>';
-      }
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
-      assert(richEmptyTab && richEmptyTab.content === '', 'Rich empty HTML normalizes to blank when saved');
-
-      // Test 44: Notepad once flag and Rich mode switch confirmation
-      w.__textgerbil.newTab('text');
-      const testTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(testTabId);
-      const testTab = w.__textgerbil.tabs.find(x => x.id === testTabId);
-      
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      doc.getElementById('addNoteBtn').click();
-      const firstNoteArea = doc.querySelector('#notesContainer textarea');
-      firstNoteArea.value = 'Has content';
-      firstNoteArea.dispatchEvent(new w.Event('input'));
-      assert(testTab.hasBeenNotepad === true, 'hasBeenNotepad flag set when switching to notepad');
-      
-      const confirmDialog = doc.getElementById('confirmDialog');
-      doc.querySelector('.mode-btn[data-mode="rich"]').click();
-      assert(confirmDialog.open === true, 'Confirmation dialog opens when switching from notepad to rich');
-      
-      doc.getElementById('dialogConfirm').click();
-      assert(confirmDialog.open === false, 'Dialog closes after confirmation');
-      assert(testTab.mode === 'rich', 'Mode switched to rich after confirmation');
-      assert(testTab.hasBeenNotepad === false, 'hasBeenNotepad flag unset after switching away from notepad');
-
-      // Test 45: Notepad data re-derivation from Markdown on boot
-      await runLocalStorageInitScenario(
-        'init-notepad-derivation',
-        {
-          [STORAGE_KEY]: JSON.stringify({
-            tabs: [{
-              id: 'derive-tab',
-              title: 'Derive',
-              mode: 'notepad',
-              content: '# Note 1\nBody 1\n\n# Note 2\nBody 2',
-              theme: {},
-              previewVisible: false
-            }],
-            activeId: 'derive-tab'
-          })
-        },
-        (sw, sdoc) => {
-          const restored = sw.__textgerbil.tabs.find(x => x.id === 'derive-tab');
-          assert(restored && restored.notepadData && restored.notepadData.length === 2, 'Init re-derives notepadData from Markdown content');
-          assert(restored.notepadData[0].title === 'Note 1' && restored.notepadData[0].text === 'Body 1', 'First derived note matches');
-          assert(restored.notepadData[1].title === 'Note 2' && restored.notepadData[1].text === 'Body 2', 'Second derived note matches');
-          assert(sdoc.querySelectorAll('#notesContainer textarea').length === 2, 'Derived notes are rendered in Notepad UI');
-        }
-      );
-
-      // Test 46: Preserve multiple notes without titles through mode switch
-      w.__textgerbil.newTab('text');
-      const switchTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(switchTestId);
-      const switchTestTab = w.__textgerbil.tabs.find(x => x.id === switchTestId);
-      
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      doc.getElementById('addNoteBtn').click(); // Note 1
-      doc.getElementById('addNoteBtn').click(); // Note 2
-      const noteTextareas = doc.querySelectorAll('#notesContainer textarea');
-      noteTextareas[0].value = 'Body 1';
-      noteTextareas[0].dispatchEvent(new w.Event('input'));
-      noteTextareas[1].value = 'Body 2';
-      noteTextareas[1].dispatchEvent(new w.Event('input'));
-      
-      assert(switchTestTab.notepadData.length === 2, 'Starting with 2 notes');
-      
-      // Switch to text
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
-      assert(switchTestTab.mode === 'text', 'Switched to text mode');
-      
-      // Switch back to notepad
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      assert(switchTestTab.mode === 'notepad', 'Switched back to notepad mode');
-      assert(switchTestTab.notepadData.length === 2, 'Still has 2 notes after switching back');
-
-      // Test 47: Note body starting with # should not break splitting
-      w.__textgerbil.newTab('text');
-      const hashTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(hashTestId);
-      const hashTestTab = w.__textgerbil.tabs.find(x => x.id === hashTestId);
-      
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      doc.getElementById('addNoteBtn').click();
-      const hashTextareas = doc.querySelectorAll('#notesContainer textarea');
-      const complexBody = '# Not a real header\nJust some text';
-      hashTextareas[0].value = complexBody;
-      hashTextareas[0].dispatchEvent(new w.Event('input'));
-      
-      assert(hashTestTab.notepadData.length === 1, 'Starting with 1 note');
-      
-      // Switch to text
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
-      
-      // Switch back to notepad
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      assert(hashTestTab.notepadData.length === 1, 'Should still have only 1 note despite # in body');
-      assert(hashTestTab.notepadData[0].text === complexBody, 'Note content should be preserved exactly');
-
-      // Test 48: Exact preservation of complex bodies and multiple notes
-      w.__textgerbil.newTab('text');
-      const complexId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(complexId);
-      const complexTab = w.__textgerbil.tabs.find(x => x.id === complexId);
-      
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      doc.getElementById('addNoteBtn').click(); // Note 1
-      doc.getElementById('addNoteBtn').click(); // Note 2
-      
-      const cts = doc.querySelectorAll('#notesContainer textarea');
-      const ins = doc.querySelectorAll('#notesContainer input');
-      
-      const body1 = '  Leading space\n# Middle header\nTrailing newline\n';
-      const body2 = '## Nested\n### Even deeper\n# At Start';
-      
-      ins[0].value = 'Title 1';
-      ins[0].dispatchEvent(new w.Event('input'));
-      cts[0].value = body1;
-      cts[0].dispatchEvent(new w.Event('input'));
-      
-      ins[1].value = 'Title 2';
-      ins[1].dispatchEvent(new w.Event('input'));
-      cts[1].value = body2;
-      cts[1].dispatchEvent(new w.Event('input'));
-      
-      // Switch to text
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
-      // Switch back to notepad
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      
-      assert(complexTab.notepadData.length === 2, 'Still has 2 notes');
-      assert(complexTab.notepadData[0].title === 'Title 1', 'Title 1 preserved');
-      const newlineTrim = s => s.replace(/^\n+/, '').replace(/\n+$/, '');
-      assert(complexTab.notepadData[0].text === newlineTrim(body1), 'Body 1 preserved (modulo outer trim)');
-      assert(complexTab.notepadData[1].title === 'Title 2', 'Title 2 preserved');
-      assert(complexTab.notepadData[1].text === newlineTrim(body2), 'Body 2 preserved (modulo outer trim)');
-
-      // Test 49: Body with multiple lines starting with #
-      w.__textgerbil.newTab('text');
-      const multiHashId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(multiHashId);
-      const multiHashTab = w.__textgerbil.tabs.find(x => x.id === multiHashId);
-      
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      doc.getElementById('addNoteBtn').click();
-      
-      const multiCt = doc.querySelector('#notesContainer textarea');
-      const multiBody = '# Line 1\n# Line 2\n# Line 3';
-      multiCt.value = multiBody;
-      multiCt.dispatchEvent(new w.Event('input'));
-      
-      doc.querySelector('.mode-btn[data-mode="text"]').click();
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      
-      assert(multiHashTab.notepadData.length === 1, 'Only 1 note despite every line starting with #');
-      assert(multiHashTab.notepadData[0].text === multiBody, 'Multi-line hash body preserved exactly');
-
-      // Test 50: New notes added to end of notepadData
-      w.__textgerbil.newTab('text');
-      const orderTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(orderTestId);
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      
-      doc.getElementById('addNoteBtn').click(); // Note 1
-      let nts = doc.querySelectorAll('#notesContainer textarea');
-      nts[0].value = 'First Note';
-      nts[0].dispatchEvent(new w.Event('input'));
-      
-      doc.getElementById('addNoteBtn').click(); // Note 2
-      nts = doc.querySelectorAll('#notesContainer textarea');
-      assert(nts.length === 2, 'Two notes exist');
-      assert(nts[0].value === 'First Note', 'First note stays at the top');
-      assert(nts[1].value === '', 'Second note is at the bottom');
-
-      // Test 51: Bypass confirm on empty tab close
-      w.__textgerbil.newTab('text');
-      const emptyTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(emptyTabId);
-      const tabsBeforeEmptyClose = w.__textgerbil.tabs.length;
-      const activeTabBtn = doc.querySelector('.tab.border-brand-500 .close');
-      activeTabBtn.click();
-      assert(w.__textgerbil.tabs.length === tabsBeforeEmptyClose - 1, 'Empty tab closes immediately without confirmation');
-      assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty tab close');
-
-      // Test 52: Bypass confirm on empty note delete
-      w.__textgerbil.newTab('text');
-      const emptyNoteTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(emptyNoteTabId);
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      doc.getElementById('addNoteBtn').click(); // Add an empty note
-      const delBtn = doc.querySelector('.note-header button'); // Delete button
-      const notesBeforeEmptyDelete = doc.querySelectorAll('#notesContainer textarea').length;
-      delBtn.click();
-      const notesAfterEmptyDelete = doc.querySelectorAll('#notesContainer textarea').length;
-      assert(notesAfterEmptyDelete === notesBeforeEmptyDelete - 1, 'Empty note deletes immediately without confirmation');
-      assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty note delete');
-
-      // Test 53: Bypass confirm on switch to rich editor with empty notepad
-      w.__textgerbil.newTab('text');
-      const emptyRichTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
-      w.__textgerbil.selectTab(emptyRichTabId);
-      doc.querySelector('.mode-btn[data-mode="notepad"]').click();
-      // It's empty now.
-      doc.querySelector('.mode-btn[data-mode="rich"]').click();
-      const currentModeTab = w.__textgerbil.tabs.find(x => x.id === emptyRichTabId);
-      assert(currentModeTab.mode === 'rich', 'Switch to rich from empty notepad happens immediately without confirmation');
-      assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty notepad switch');
-
-      // Test 54: Tab drag reordering via pointer events
+      // Test 43: Tab drag reordering via pointer events
       w.__textgerbil.newTab('text');
       w.__textgerbil.newTab('text');
       const startCount = w.__textgerbil.tabs.length;

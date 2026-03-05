@@ -5,7 +5,7 @@ function getFunctions() {
   const htmlPath = path.resolve(__dirname, '../../index.html');
   const html = fs.readFileSync(htmlPath, 'utf8');
   
-  const functionNames = ['uid', 'detectLanguageFromTitle', 'splitMarkdownToNotes', 'normalizeLoadedTab', 'notesToMarkdown'];
+  const functionNames = ['uid', 'detectLanguageFromTitle', 'normalizeLoadedTab'];
   const context = {
     MIN_PREVIEW_WIDTH: 260,
     DEFAULT_PREVIEW_WIDTH: 360,
