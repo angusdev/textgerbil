@@ -755,7 +755,20 @@ const { JSDOM } = require('jsdom');
       const expectedOrder = ['Detect', 'Plain', 'CSS', 'HTML', 'Java', 'JavaScript', 'JSON', 'Markdown', 'Python', 'Shell', 'SQL', 'XML', 'YAML'];
       assert(JSON.stringify(langOptions) === JSON.stringify(expectedOrder), 'Language dropdown order is correct (Detect, Plain, then Alphabetical)');
 
-      // Test 43: Notepad once flag and Rich mode switch confirmation
+      // Test 43: Rich empty markup normalizes to blank content
+      w.__textgerbil.newTab('text');
+      const richEmptyTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(richEmptyTabId);
+      const richEmptyTab = w.__textgerbil.tabs.find(x => x.id === richEmptyTabId);
+      doc.querySelector('.mode-btn[data-mode="rich"]').click();
+      const richEmptyEditor = w.__textgerbil.editors[richEmptyTabId] && w.__textgerbil.editors[richEmptyTabId].quill;
+      if (richEmptyEditor && richEmptyEditor.root) {
+        richEmptyEditor.root.innerHTML = '<p><br></p>';
+      }
+      doc.querySelector('.mode-btn[data-mode="text"]').click();
+      assert(richEmptyTab && richEmptyTab.content === '', 'Rich empty HTML normalizes to blank when saved');
+
+      // Test 44: Notepad once flag and Rich mode switch confirmation
       w.__textgerbil.newTab('text');
       const testTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(testTabId);
@@ -777,7 +790,7 @@ const { JSDOM } = require('jsdom');
       assert(testTab.mode === 'rich', 'Mode switched to rich after confirmation');
       assert(testTab.hasBeenNotepad === false, 'hasBeenNotepad flag unset after switching away from notepad');
 
-      // Test 44: Notepad data re-derivation from Markdown on boot
+      // Test 45: Notepad data re-derivation from Markdown on boot
       await runLocalStorageInitScenario(
         'init-notepad-derivation',
         {
@@ -802,7 +815,7 @@ const { JSDOM } = require('jsdom');
         }
       );
 
-      // Test 45: Preserve multiple notes without titles through mode switch
+      // Test 46: Preserve multiple notes without titles through mode switch
       w.__textgerbil.newTab('text');
       const switchTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(switchTestId);
@@ -828,7 +841,7 @@ const { JSDOM } = require('jsdom');
       assert(switchTestTab.mode === 'notepad', 'Switched back to notepad mode');
       assert(switchTestTab.notepadData.length === 2, 'Still has 2 notes after switching back');
 
-      // Test 46: Note body starting with # should not break splitting
+      // Test 47: Note body starting with # should not break splitting
       w.__textgerbil.newTab('text');
       const hashTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(hashTestId);
@@ -851,7 +864,7 @@ const { JSDOM } = require('jsdom');
       assert(hashTestTab.notepadData.length === 1, 'Should still have only 1 note despite # in body');
       assert(hashTestTab.notepadData[0].text === complexBody, 'Note content should be preserved exactly');
 
-      // Test 47: Exact preservation of complex bodies and multiple notes
+      // Test 48: Exact preservation of complex bodies and multiple notes
       w.__textgerbil.newTab('text');
       const complexId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(complexId);
@@ -889,7 +902,7 @@ const { JSDOM } = require('jsdom');
       assert(complexTab.notepadData[1].title === 'Title 2', 'Title 2 preserved');
       assert(complexTab.notepadData[1].text === newlineTrim(body2), 'Body 2 preserved (modulo outer trim)');
 
-      // Test 48: Body with multiple lines starting with #
+      // Test 49: Body with multiple lines starting with #
       w.__textgerbil.newTab('text');
       const multiHashId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(multiHashId);
@@ -909,7 +922,7 @@ const { JSDOM } = require('jsdom');
       assert(multiHashTab.notepadData.length === 1, 'Only 1 note despite every line starting with #');
       assert(multiHashTab.notepadData[0].text === multiBody, 'Multi-line hash body preserved exactly');
 
-      // Test 49: New notes added to end of notepadData
+      // Test 50: New notes added to end of notepadData
       w.__textgerbil.newTab('text');
       const orderTestId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(orderTestId);
@@ -926,7 +939,7 @@ const { JSDOM } = require('jsdom');
       assert(nts[0].value === 'First Note', 'First note stays at the top');
       assert(nts[1].value === '', 'Second note is at the bottom');
 
-      // Test 50: Bypass confirm on empty tab close
+      // Test 51: Bypass confirm on empty tab close
       w.__textgerbil.newTab('text');
       const emptyTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(emptyTabId);
@@ -936,7 +949,7 @@ const { JSDOM } = require('jsdom');
       assert(w.__textgerbil.tabs.length === tabsBeforeEmptyClose - 1, 'Empty tab closes immediately without confirmation');
       assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty tab close');
 
-      // Test 51: Bypass confirm on empty note delete
+      // Test 52: Bypass confirm on empty note delete
       w.__textgerbil.newTab('text');
       const emptyNoteTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(emptyNoteTabId);
@@ -949,7 +962,7 @@ const { JSDOM } = require('jsdom');
       assert(notesAfterEmptyDelete === notesBeforeEmptyDelete - 1, 'Empty note deletes immediately without confirmation');
       assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty note delete');
 
-      // Test 52: Bypass confirm on switch to rich editor with empty notepad
+      // Test 53: Bypass confirm on switch to rich editor with empty notepad
       w.__textgerbil.newTab('text');
       const emptyRichTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
       w.__textgerbil.selectTab(emptyRichTabId);
@@ -960,7 +973,7 @@ const { JSDOM } = require('jsdom');
       assert(currentModeTab.mode === 'rich', 'Switch to rich from empty notepad happens immediately without confirmation');
       assert(doc.getElementById('confirmDialog').open === false, 'Confirm dialog is not opened for empty notepad switch');
 
-      // Test 53: Tab drag reordering via pointer events
+      // Test 54: Tab drag reordering via pointer events
       w.__textgerbil.newTab('text');
       w.__textgerbil.newTab('text');
       const startCount = w.__textgerbil.tabs.length;
