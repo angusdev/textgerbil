@@ -723,10 +723,11 @@
       }
       const insertIndex = getSnappedInsertIndex(originIndex);
       if(insertIndex!==draggedTabIndex){
-        const moved=tabs.splice(draggedTabIndex,1)[0];
-        tabs.splice(insertIndex,0,moved);
-        save();
-        renderTabs();
+        const dropTargetRect = getDropTargetRect();
+        animateTabDragGhostToRect(dropTargetRect,()=>{
+          commitTabReorder(originIndex);
+        });
+        return;
       }
       resetTabDragState();
       setTimeout(()=>{
@@ -763,13 +764,15 @@
       tabDragGhost = null;
     }
 
-    function returnTabDragGhostToOrigin(onComplete){
-      if(!tabDragGhost){
+    function animateTabDragGhostToRect(targetRect,onComplete){
+      if(!tabDragGhost || !targetRect){
         if(onComplete) onComplete();
         return;
       }
-      const targetRect = dragOriginRect;
-      if(!targetRect){
+      const canAnimate = typeof window!=='undefined' && typeof window.requestAnimationFrame==='function';
+      if(!canAnimate){
+        tabDragGhost.style.left = `${targetRect.left}px`;
+        tabDragGhost.style.top = `${targetRect.top}px`;
         if(onComplete) onComplete();
         return;
       }
@@ -789,11 +792,37 @@
       tabDragGhost.addEventListener('transitionend', onTransitionEnd);
       tabDragGhost.style.transition = 'left 0.18s ease, top 0.18s ease, opacity 0.18s ease';
       tabDragGhost.style.opacity = '0.7';
-      requestAnimationFrame(()=>{
+      window.requestAnimationFrame(()=>{
         tabDragGhost.style.left = `${targetRect.left}px`;
         tabDragGhost.style.top = `${targetRect.top}px`;
       });
       setTimeout(finish, 220);
+    }
+
+    function getDropTargetRect(){
+      if(tabDropPlaceholder){
+        const rect = tabDropPlaceholder.getBoundingClientRect();
+        if(rect && rect.width>0 && rect.height>0) return rect;
+      }
+      return dragOriginRect;
+    }
+
+    function returnTabDragGhostToOrigin(onComplete){
+      animateTabDragGhostToRect(dragOriginRect,onComplete);
+    }
+
+    function commitTabReorder(originIndex){
+      const insertIndex = getSnappedInsertIndex(originIndex);
+      if(insertIndex!==draggedTabIndex){
+        const moved=tabs.splice(draggedTabIndex,1)[0];
+        tabs.splice(insertIndex,0,moved);
+        save();
+        renderTabs();
+      }
+      resetTabDragState();
+      setTimeout(()=>{
+        pointerDragSuppressNextClick = false;
+      },0);
     }
 
     function updateDragGhostCursor(){
