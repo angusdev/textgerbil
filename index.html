@@ -88,6 +88,60 @@
     .emoji-picker{position:fixed;z-index:10020;max-width:320px;max-height:320px;overflow:auto;padding:10px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,0.18)}
     .emoji-group-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#64748b;margin:8px 0 4px}
     .emoji-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+    .ql-font-arial{font-family:Arial,Helvetica,sans-serif}
+    .ql-font-helvetica{font-family:Helvetica,Arial,sans-serif}
+    .ql-font-times-new-roman{font-family:"Times New Roman",Times,serif}
+    .ql-font-times{font-family:Times,"Times New Roman",serif}
+    .ql-font-georgia{font-family:Georgia,serif}
+    .ql-font-verdana{font-family:Verdana,Geneva,sans-serif}
+    .ql-font-trebuchet-ms{font-family:"Trebuchet MS","Trebuchet",sans-serif}
+    .ql-font-courier-new{font-family:"Courier New",Courier,monospace}
+    .ql-font-lucida-console{font-family:"Lucida Console","Lucida Sans Typewriter",monospace}
+    .ql-font-tahoma{font-family:Tahoma,Geneva,sans-serif}
+    .ql-font-palatino{font-family:"Palatino Linotype","Book Antiqua",Palatino,serif}
+    .ql-font-garamond{font-family:Garamond,"Times New Roman",serif}
+    .ql-font-comic-sans-ms{font-family:"Comic Sans MS","Comic Sans",cursive}
+    .ql-snow .ql-picker.ql-font{max-width:160px}
+    .ql-snow .ql-picker.ql-font .ql-picker-label,
+    .ql-snow .ql-picker.ql-font .ql-picker-item{font-size:12px}
+    .ql-snow .ql-picker.ql-font .ql-picker-label{
+      display:block;
+      box-sizing:border-box;
+      padding-right:14px;
+    }
+    .ql-snow .ql-picker.ql-font .ql-picker-label::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-item::before{
+      display:block;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before{content:"Arial"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="helvetica"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="helvetica"]::before{content:"Helvetica"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before{content:"Times New Roman"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times"]::before{content:"Times"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="georgia"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="georgia"]::before{content:"Georgia"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="verdana"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="verdana"]::before{content:"Verdana"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="trebuchet-ms"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="trebuchet-ms"]::before{content:"Trebuchet MS"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="courier-new"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="courier-new"]::before{content:"Courier New"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="lucida-console"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="lucida-console"]::before{content:"Lucida Console"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="tahoma"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="tahoma"]::before{content:"Tahoma"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="palatino"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="palatino"]::before{content:"Palatino"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="garamond"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="garamond"]::before{content:"Garamond"}
+    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="comic-sans-ms"]::before,
+    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="comic-sans-ms"]::before{content:"Comic Sans MS"}
     .emoji-item{border:none;background:transparent;border-radius:8px;cursor:pointer;font-size:18px;line-height:1;padding:6px}
     .emoji-item:hover{background:#e2e8f0}
     dialog::backdrop{background:rgba(15,23,42,0.5);backdrop-filter:blur(4px)}
@@ -1416,10 +1470,39 @@
         };
         return;
       }
+      if(!window.__TEXTGERBIL_QUILL_FONT_SET){
+        const Font = Quill.import('formats/font');
+        Font.whitelist = [
+          'arial','comic-sans-ms','courier-new','garamond','georgia',
+          'helvetica','lucida-console','palatino','tahoma','times',
+          'times-new-roman','trebuchet-ms','verdana'
+        ];
+        Quill.register(Font,true);
+        window.__TEXTGERBIL_QUILL_FONT_SET = true;
+      }
       ed.quill = new Quill('#quill-root',{
         theme: 'snow',
         placeholder: 'Start typing...',
-        modules: {toolbar: [[{header:[1,2,false]}],['bold','italic','underline'],['link','blockquote','code-block'],[{list:'ordered'},{list:'bullet'}]]}
+        modules: {toolbar: [
+          [{font:[
+            'arial','comic-sans-ms','courier-new','garamond','georgia',
+            'helvetica','lucida-console','palatino','tahoma','times',
+            'times-new-roman','trebuchet-ms','verdana'
+          ]},{size:['small',false,'large','huge']}],
+          [{header:[1,2,3,4,5,6,false]}],
+          ['bold','italic','underline','strike','code'],
+          [{color:[]},{background:[]}],
+          ['blockquote','code-block'],
+          [{list:'ordered'},{list:'bullet'},{list:'check'}],
+          ['clean']
+        ]},
+        formats: [
+          'header','font','size',
+          'bold','italic','underline','strike','code',
+          'color','background',
+          'blockquote','code-block',
+          'list'
+        ]
       });
       if(t && t.content) ed.quill.root.innerHTML=t.content;
       ed.quill.on('text-change',()=>{
