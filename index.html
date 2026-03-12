@@ -80,6 +80,7 @@
     .add-tab-option{width:100%;height:32px;border:none;border-radius:8px;background:transparent;color:#334155;display:flex;align-items:center;gap:6px;padding:0 8px;cursor:pointer;font-size:13px;text-align:left}
     .add-tab-option:hover{background:#f1f5f9}
     .add-tab-option .mode-label{margin-left:2px}
+    .tab-remove-placeholder{flex:0 0 auto;height:34px;border-radius:10px;background:transparent;transition:width 0.22s ease, opacity 0.22s ease, margin 0.22s ease}
     .tab.drag-origin{opacity:.55}
     .tab.drag-origin-collapsed{position:absolute !important;visibility:hidden !important;pointer-events:none !important}
     .tab-drop-placeholder{flex:0 0 auto;height:34px;min-width:64px;border:2px dashed var(--accent);border-radius:10px;background:rgb(186 230 253 / 0.4);pointer-events:none}
@@ -907,6 +908,7 @@
         const base='tab group inline-flex min-w-0 flex-initial cursor-pointer select-none items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition';
         const state=t.id===activeId?' border-brand-500 bg-sky-50 text-sky-700 shadow-sm':' border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50';
         d.className=base+state;
+        d.dataset.tabId = t.id;
         d.addEventListener('pointerdown',(e)=>handleTabPointerDown(e,i,d));
         const iconSpan=document.createElement('span');
         iconSpan.className='shrink-0 inline-flex items-center';
@@ -1062,6 +1064,40 @@
       save();
     }
 
+    function animateTabRemoval(tabId,onComplete){
+      const tabEl = document.querySelector(`#tabs .tab[data-tab-id="${tabId}"]`);
+      if(!tabEl){
+        if(typeof onComplete === 'function') onComplete();
+        return;
+      }
+      const rect = tabEl.getBoundingClientRect();
+      const placeholder = document.createElement('div');
+      placeholder.className = 'tab-remove-placeholder';
+      placeholder.style.width = `${Math.round(rect.width)}px`;
+      placeholder.style.opacity = '1';
+      tabEl.replaceWith(placeholder);
+      let finished = false;
+      const cleanup = ()=>{
+        if(finished)return;
+        finished = true;
+        placeholder.removeEventListener('transitionend',onEnd);
+        if(placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+        if(typeof onComplete === 'function') onComplete();
+      };
+      const onEnd = (ev)=>{
+        if(ev.target !== placeholder) return;
+        if(ev.propertyName !== 'width') return;
+        cleanup();
+      };
+      placeholder.addEventListener('transitionend',onEnd);
+      requestAnimationFrame(()=>{
+        placeholder.style.width = '0px';
+        placeholder.style.opacity = '0';
+        placeholder.style.margin = '0';
+      });
+      setTimeout(cleanup,260);
+    }
+
     function closeTab(id,targetEl=null){
       const t = tabs.find(x=>x.id===id);
       const title = t ? t.title : getDefaultTitleForMode(t && t.mode);
@@ -1075,25 +1111,27 @@
         });
       };
       const executeClose = ()=>{
-        const idx = tabs.findIndex(x=>x.id === id);
-        if(idx === -1)return;
-        if(editors[id]){
-          const ed = editors[id];
-          if(ed.cm && typeof ed.cm.toTextArea === 'function'){
-            try { ed.cm.toTextArea(); }catch { /* ignore */ }
+        animateTabRemoval(id,()=>{
+          const idx = tabs.findIndex(x=>x.id === id);
+          if(idx === -1)return;
+          if(editors[id]){
+            const ed = editors[id];
+            if(ed.cm && typeof ed.cm.toTextArea === 'function'){
+              try { ed.cm.toTextArea(); }catch { /* ignore */ }
+            }
+            delete editors[id];
           }
-          delete editors[id];
-        }
-        tabs.splice(idx,1);
-        if(activeId === id){
-          if(tabs[idx]) activeId = tabs[idx].id;
-          else if(tabs[idx - 1]) activeId = tabs[idx - 1].id;
-          else activeId = null;
-        }
-        ensureAtLeastOne();
-        save();
-        renderTabs();
-        if(activeId) selectTab(activeId);
+          tabs.splice(idx,1);
+          if(activeId === id){
+            if(tabs[idx]) activeId = tabs[idx].id;
+            else if(tabs[idx - 1]) activeId = tabs[idx - 1].id;
+            else activeId = null;
+          }
+          ensureAtLeastOne();
+          save();
+          renderTabs();
+          if(activeId) selectTab(activeId);
+        });
       };
       const liveContent = (t && activeId === id && t.mode !== 'notepad') ? getEditorContent() : (t ? t.content || '' : '');
       const hasMeaningfulContent = t && t.mode==='rich'
