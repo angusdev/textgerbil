@@ -190,6 +190,14 @@
         <div class="flex flex-wrap items-center gap-2">
           <div id="tabTitle" class="min-w-0 flex-1 font-semibold text-slate-800"></div>
           <div class="toolbar ml-auto flex flex-wrap items-center gap-2">
+          <button id="toggleWrap" class="small" aria-label="Toggle wrap" title="Wrap text">
+            <svg class="icon" viewBox="0 0 128 128" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="16" y1="28" x2="112" y2="28"/>
+              <path d="M16 64 H96 A20 19 0 0 1 100 100 H80"/>
+              <polygon fill="currentColor" stroke="none" points="86,82 60,100 86,118"/>
+              <line x1="16" y1="100" x2="48" y2="100"/>
+            </svg>
+          </button>
           <button id="emojiBtn" class="small" aria-label="Emoji picker" title="Emoji">
             <span aria-hidden="true">😊</span>
           </button>
@@ -1080,7 +1088,7 @@
       });
     }
 
-    function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Text',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH});activeId=tabs[0].id}}
+    function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Text',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH,wrapText:false});activeId=tabs[0].id}}
 
     function normalizeLoadedTab(rawTab){
       if(!rawTab || typeof rawTab!=='object')return null;
@@ -1099,6 +1107,7 @@
       if(typeof tab.previewVisible!=='boolean') tab.previewVisible=false;
       const parsedPreviewWidth = Number(tab.previewWidth);
       tab.previewWidth = Number.isFinite(parsedPreviewWidth) ? Math.max(MIN_PREVIEW_WIDTH,Math.round(parsedPreviewWidth)) : DEFAULT_PREVIEW_WIDTH;
+      tab.wrapText = typeof tab.wrapText === 'boolean' ? tab.wrapText : false;
       return tab;
     }
 
@@ -1199,7 +1208,7 @@
       if(mode==='text') title = getNextModeTabTitle('text','Text');
       else if(mode==='rich') title = getNextModeTabTitle('rich','Doc');
       else if(mode==='notepad') title = getNextModeTabTitle('notepad','Note');
-      const t={id:uid(),title,mode,language:'detect',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
+      const t={id:uid(),title,mode,language:'detect',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH,wrapText:false};
       if(mode==='notepad') t.notepadData=[];
       if(globalTheme){t.theme=Object.assign({},globalTheme);} // inherit global
       tabs.push(t);
@@ -1527,7 +1536,9 @@
           getValue:()=>t.content||'',
           setValue:(v)=>{t.content=v;},
           on:()=>{},
-          setOption:()=>{},
+          setOption:(key,value)=>{
+            if(key==='lineWrapping') t.wrapText = !!value;
+          },
           focus:()=>{window.__TEXTGERBIL_HEADLESS_LAST_FOCUS={tabId,mode:'text'};},
           toTextArea:()=>{},
           getWrapperElement:()=>({style:{}}),
@@ -1545,6 +1556,7 @@
         mode: lang,
         theme: 'monokai',
         lineNumbers: true,
+        lineWrapping: !!t.wrapText,
         tabSize: 2,
         indentUnit: 2
       });
@@ -1691,6 +1703,7 @@
       const t = tabs.find(x=>x.id===tabId);
       applyPreviewVisibility(t);
       syncPreviewToggleState();
+      syncWrapToggleState();
       const langSelect = document.getElementById('languageSelect');
       if(langSelect){
         langSelect.style.display = 'inline-block';
@@ -1766,6 +1779,18 @@
       btn.setAttribute('aria-pressed',String(isVisible));
     }
 
+    function syncWrapToggleState(){
+      const btn=document.getElementById('toggleWrap');
+      if(!btn)return;
+      const t=tabs.find(x=>x.id===activeId);
+      const canWrap=!!(t && t.mode==='text');
+      btn.disabled=!canWrap;
+      const isActive=!!(t && t.wrapText);
+      btn.classList.toggle('is-active',isActive);
+      btn.setAttribute('aria-pressed',String(isActive));
+      btn.title = canWrap ? (isActive ? 'Disable wrap' : 'Wrap text') : 'Wrap text (text mode only)';
+    }
+
     // UI wiring
     renderAddTabIcons();
     document.getElementById('tabTitle').ondblclick=()=>enableTabRename(document.getElementById('tabTitle'),activeId,true);
@@ -1813,6 +1838,17 @@
       if(t.previewVisible) updatePreview(true);
       save();
       syncPreviewToggleState();
+    }
+    document.getElementById('toggleWrap').onclick=()=>{
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t || t.mode!=='text')return;
+      t.wrapText = !t.wrapText;
+      const ed = editors[t.id];
+      if(ed && ed.cm && typeof ed.cm.setOption==='function'){
+        ed.cm.setOption('lineWrapping',!!t.wrapText);
+      }
+      save();
+      syncWrapToggleState();
     }
     document.getElementById('emojiBtn').onmousedown=(ev)=>{
       ev.preventDefault();
@@ -1896,6 +1932,7 @@
     renderTabs();
     selectTab(activeId);
     syncPreviewToggleState();
+    syncWrapToggleState();
 
     // import/export helpers
     function exportCurrent(){
