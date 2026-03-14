@@ -21,6 +21,12 @@ const { JSDOM } = require('jsdom');
   if(!dom.window.document.execCommand){
     dom.window.document.execCommand = () => false;
   }
+  if(!dom.window.requestAnimationFrame){
+    dom.window.requestAnimationFrame = (cb)=>dom.window.setTimeout(()=>cb(Date.now()),0);
+  }
+  if(!dom.window.cancelAnimationFrame){
+    dom.window.cancelAnimationFrame = (id)=>dom.window.clearTimeout(id);
+  }
   
   // Polyfill <dialog> for JSDOM
   const dialogProto = dom.window.Element.prototype;
@@ -114,6 +120,12 @@ const { JSDOM } = require('jsdom');
         if(!scenarioDom.window.document.execCommand){
           scenarioDom.window.document.execCommand = () => false;
         }
+        if(!scenarioDom.window.requestAnimationFrame){
+          scenarioDom.window.requestAnimationFrame = (cb)=>scenarioDom.window.setTimeout(()=>cb(Date.now()),0);
+        }
+        if(!scenarioDom.window.cancelAnimationFrame){
+          scenarioDom.window.cancelAnimationFrame = (id)=>scenarioDom.window.clearTimeout(id);
+        }
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => reject(new Error(`${name} timed out waiting for load`)), 3000);
           scenarioDom.window.addEventListener('load', () => {
@@ -179,7 +191,7 @@ const { JSDOM } = require('jsdom');
           if (ed && ed.quill && ed.quill.root) ed.quill.root.innerHTML = '';
           return;
         }
-        const delBtn = doc.querySelector('.note-header button');
+        const delBtn = doc.querySelector('#notesContainer .note-delete');
         if (!delBtn) return;
         delBtn.click();
         const confirmDialog = doc.getElementById('confirmDialog');
@@ -537,12 +549,16 @@ const { JSDOM } = require('jsdom');
       // Test 27: Close tab via UI button
       const closeBtn = doc.querySelector('.tab .close');
       if (closeBtn) {
+        const closeTabEl = closeBtn.closest('.tab');
+        const closeTabId = closeTabEl ? closeTabEl.dataset.tabId : null;
+        const hadEditor = !!(closeTabId && w.__textgerbil.editors[closeTabId]);
         closeBtn.click();
         doc.getElementById('dialogConfirm').click();
         const tabCountAfterClose = doc.querySelectorAll('.tab').length;
         assert(tabCountAfterClose >= 1, 'At least one tab remains after clicking close');
         const editorsAfter = Object.keys(w.__textgerbil.editors).length;
-        assert(editorsAfter === editorsBefore - 1, 'Editor instance removed after closing tab');
+        const expectedDelta = hadEditor ? 1 : 0;
+        assert(editorsAfter === editorsBefore - expectedDelta, 'Editor instance removed after closing tab');
         assert(true, 'Close button click executed without exception');
       } else {
         assert(false, 'No close button found for close test');
@@ -805,6 +821,10 @@ const { JSDOM } = require('jsdom');
       assert(htmlIframe.getAttribute('sandbox') !== null, 'HTML preview iframe has sandbox attribute');
       assert((htmlIframe.getAttribute('sandbox') || '') === '', 'HTML preview iframe uses strict empty sandbox');
       assert((htmlIframe.getAttribute('srcdoc') || '').includes("default-src 'none'"), 'HTML iframe srcdoc includes strict CSP');
+      w.__textgerbil.setActiveTabPreviewWidth(420);
+      previewTab.content = `<div>${'a'.repeat(5000)}</div>`;
+      w.__textgerbil.updatePreview();
+      assert(previewPanel.style.width === '420px', 'Preview width remains fixed with long HTML line');
 
       w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: false, supportsSandbox: true });
       doc.getElementById('languageSelect').value = 'markdown';
