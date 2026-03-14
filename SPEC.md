@@ -98,6 +98,7 @@ Global configuration includes:
 
 Mode switching is managed via **toggle buttons** in the toolbar. The transition from `notepad` to `rich` mode is guarded by a confirmation prompt to prevent unintentional data loss. The language dropdown is visible in all modes but disabled for `rich` and `notepad`. 
 The preview toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` + `iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available.
+Preview updates are debounced during typing to reduce iframe flicker.
 Dialogs feature **premium aesthetics**, including backdrop blur, smooth animations, and modern card styling.
 
 ### Notepad Serialization & Integrity
