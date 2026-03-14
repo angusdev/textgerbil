@@ -791,6 +791,9 @@ const { JSDOM } = require('jsdom');
       assert(markdownSrcdoc.includes("default-src 'none'"), 'Markdown iframe srcdoc includes strict CSP');
       assert(markdownSrcdoc.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), 'Markdown raw HTML is escaped in preview output');
       assert(!markdownSrcdoc.includes('<script>alert(1)</script>'), 'Markdown raw script tag is not active in preview output');
+      w.__textgerbil.updatePreview();
+      const markdownIframe2 = previewContent.querySelector('iframe');
+      assert(markdownIframe === markdownIframe2, 'Preview does not re-render iframe when content is unchanged');
 
       doc.getElementById('languageSelect').value = 'htmlmixed';
       doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));

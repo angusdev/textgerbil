@@ -511,6 +511,21 @@
       pv.appendChild(box);
     }
 
+    const PREVIEW_DEBOUNCE_MS = 300;
+    const PREVIEW_SWAP_TIMEOUT_MS = 500;
+    let previewDebounceTimer = null;
+    let previewSwapToken = 0;
+    let previewPendingIframe = null;
+    let lastPreviewTabId = null;
+
+    function schedulePreviewUpdate(){
+      if(previewDebounceTimer) clearTimeout(previewDebounceTimer);
+      previewDebounceTimer = setTimeout(()=>{
+        previewDebounceTimer = null;
+        updatePreview();
+      },PREVIEW_DEBOUNCE_MS);
+    }
+
     function buildSandboxedPreviewIframe(htmlBody){
       const iframe=document.createElement('iframe');
       iframe.style.width='100%';
@@ -521,6 +536,75 @@
       iframe.referrerPolicy='no-referrer';
       iframe.srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; font-src data:; connect-src \'none\'; media-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><style>html,body{margin:0;padding:10px;color:#0f172a;background:#fff;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;line-height:1.5}pre{white-space:pre-wrap;word-break:break-word}</style></head><body>'+htmlBody+'</body></html>';
       return iframe;
+    }
+
+    function swapPreviewIframe(pv,htmlBody){
+      const token = ++previewSwapToken;
+      const iframe = buildSandboxedPreviewIframe(htmlBody);
+      const oldIframe = pv.querySelector('iframe');
+      if(previewPendingIframe && previewPendingIframe !== oldIframe){
+        if(previewPendingIframe.parentNode) previewPendingIframe.parentNode.removeChild(previewPendingIframe);
+      }
+      previewPendingIframe = iframe;
+      if(window.__TEXTGERBIL_HEADLESS || !oldIframe){
+        pv.innerHTML='';
+        pv.appendChild(iframe);
+        previewPendingIframe = null;
+        return;
+      }
+      if(!pv.style.position) pv.style.position = 'relative';
+      const pvStyle = window.getComputedStyle ? getComputedStyle(pv) : null;
+      const padTop = pvStyle ? pvStyle.paddingTop : '0px';
+      const padRight = pvStyle ? pvStyle.paddingRight : '0px';
+      const padBottom = pvStyle ? pvStyle.paddingBottom : '0px';
+      const padLeft = pvStyle ? pvStyle.paddingLeft : '0px';
+      if(!('previewOverflow' in pv.dataset)){
+        pv.dataset.previewOverflow = pv.style.overflow || '';
+      }
+      pv.style.overflow = 'hidden';
+      iframe.style.position='absolute';
+      iframe.style.top=padTop;
+      iframe.style.right=padRight;
+      iframe.style.bottom=padBottom;
+      iframe.style.left=padLeft;
+      iframe.style.opacity='0';
+      iframe.style.transition='opacity 120ms ease';
+      iframe.style.pointerEvents='none';
+      pv.appendChild(iframe);
+      let settled = false;
+      const finalize = ()=>{
+        if(settled) return;
+        settled = true;
+        if(token !== previewSwapToken){
+          if(iframe.parentNode) iframe.parentNode.removeChild(iframe);
+          if(previewPendingIframe === iframe) previewPendingIframe = null;
+          return;
+        }
+        requestAnimationFrame(()=>{iframe.style.opacity='1';});
+        const cleanup = ()=>{
+          if(token !== previewSwapToken) return;
+          if(oldIframe && oldIframe.parentNode) oldIframe.parentNode.removeChild(oldIframe);
+          if('previewOverflow' in pv.dataset){
+            pv.style.overflow = pv.dataset.previewOverflow || '';
+            delete pv.dataset.previewOverflow;
+          }
+          iframe.style.position='';
+          iframe.style.top='';
+          iframe.style.right='';
+          iframe.style.bottom='';
+          iframe.style.left='';
+          iframe.style.pointerEvents='';
+          iframe.removeEventListener('transitionend',cleanup);
+          if(previewPendingIframe === iframe) previewPendingIframe = null;
+        };
+        iframe.addEventListener('transitionend',cleanup);
+        setTimeout(cleanup,200);
+      };
+      const timer = setTimeout(finalize,PREVIEW_SWAP_TIMEOUT_MS);
+      iframe.addEventListener('load',()=>{
+        clearTimeout(timer);
+        finalize();
+      },{once:true});
     }
 
     function detectLanguageFromTitle(title){
@@ -1222,33 +1306,52 @@
       save();
     }
 
-    function updatePreview(){
+    function buildPreviewSignature(tab,lang){
+      const support = canUseSecureIframePreview() ? 'secure' : 'insecure';
+      const mdReady = md ? 'md1' : 'md0';
+      const jsonReady = window.JSONFormatter ? 'json1' : 'json0';
+      return [tab.mode,lang,support,mdReady,jsonReady,tab.content || ''].join('|');
+    }
+
+    function updatePreview(force=false){
+      if(previewDebounceTimer){
+        clearTimeout(previewDebounceTimer);
+        previewDebounceTimer = null;
+      }
       const t=tabs.find(x=>x.id===activeId);
       const pv=document.getElementById('previewContent');
       if(!t||!pv)return;
-      pv.innerHTML='';
+      if(!force){
+        const panel = document.getElementById('preview');
+        if(panel && panel.classList.contains('hidden')) return;
+      }
       let lang = t.language;
       if(lang==='detect') lang=detectLanguageFromTitle(t.title);
+      if(t.mode==='text' && lang==='markdown') initMarkdownIt();
+      const signature = buildPreviewSignature(t,lang);
+      if(!force && lastPreviewTabId === t.id && t.lastPreviewSignature === signature) return;
+      t.lastPreviewSignature = signature;
+      lastPreviewTabId = t.id;
       if(t.mode==='text'){
         if(lang==='markdown'){
-          initMarkdownIt();
           if(md){
             if(!canUseSecureIframePreview()){
               renderPreviewError('Secure preview unavailable',SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
             }else {
               const html=md.render(t.content||'');
-              pv.appendChild(buildSandboxedPreviewIframe(html));
+              swapPreviewIframe(pv,html);
             }
           }else {pv.textContent=t.content}
         }else if(lang==='htmlmixed'){
           if(!canUseSecureIframePreview()){
             renderPreviewError('Secure preview unavailable',SECURE_PREVIEW_UNAVAILABLE_MESSAGE);
           }else {
-            pv.appendChild(buildSandboxedPreviewIframe(t.content||''));
+            swapPreviewIframe(pv,t.content||'');
           }
         }else if(lang==='json'){
           const raw=t.content||'';
           try {
+            pv.innerHTML='';
             const parsed=JSON.parse(raw||'{}');
             if(window.JSONFormatter){
               const formatter=new window.JSONFormatter(parsed,1);
@@ -1257,6 +1360,7 @@
               pv.textContent=raw;
             }
           }catch (e){
+            pv.innerHTML='';
             const err=document.createElement('div');
             err.style.color='#b91c1c';
             err.style.marginBottom='8px';
@@ -1443,7 +1547,7 @@
       }
       ed.cm.on('change',()=>{
         const tab=tabs.find(x=>x.id===tabId);
-        if(tab){tab.content=ed.cm.getValue(); save(); updatePreview()}
+        if(tab){tab.content=ed.cm.getValue(); save(); schedulePreviewUpdate()}
       });
     }
 
@@ -1507,7 +1611,7 @@
       });
       if(t && t.content) ed.quill.root.innerHTML=t.content;
       ed.quill.on('text-change',()=>{
-        if(t){t.content=(ed.quill.root && ed.quill.root.innerHTML) || ''; save(); updatePreview()}
+        if(t){t.content=(ed.quill.root && ed.quill.root.innerHTML) || ''; save(); schedulePreviewUpdate()}
       });
     }
 
@@ -1696,6 +1800,7 @@
       if(!canTabPreview(t))return;
       t.previewVisible = !t.previewVisible;
       applyPreviewVisibility(t);
+      if(t.previewVisible) updatePreview(true);
       save();
       syncPreviewToggleState();
     }
