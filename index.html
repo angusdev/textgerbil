@@ -154,7 +154,7 @@
   <div class="app h-full flex flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-sky-100">
     <header class="border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur">
       <div class="flex items-center gap-3">
-      <img src="images/textgerbil.png" alt="TextGerbil" class="h-16" />
+      <img src="https://angusdev.github.io/textgerbil/images/textgerbil.png" alt="TextGerbil" class="h-16" />
       <div class="tabs flex min-w-0 items-center gap-2 overflow-hidden py-1" id="tabs"></div>
         <div class="add-tab-split shrink-0" id="addTabSplit" aria-label="New tab controls">
           <button id="addTabDefault" class="add-tab-main" aria-label="Add text tab" title="Add text tab">
@@ -662,6 +662,28 @@
       return 'Text';
     }
 
+    function getDefaultLanguageForMode(mode){
+      if(mode==='text') return 'detect';
+      return 'plain';
+    }
+
+    function createTabState(mode,title){
+      const t={
+        id:uid(),
+        title,
+        mode,
+        language:getDefaultLanguageForMode(mode),
+        content:'',
+        theme:{},
+        previewVisible:false,
+        previewWidth:DEFAULT_PREVIEW_WIDTH,
+        wrapText:false
+      };
+      if(mode==='notepad') t.notepadData=[];
+      if(globalTheme){t.theme=Object.assign({},globalTheme);} // inherit global
+      return t;
+    }
+
     function renameTab(tabId,newTitle){
       const t=tabs.find(x=>x.id===tabId);
       if(!t)return;
@@ -1088,7 +1110,12 @@
       });
     }
 
-    function ensureAtLeastOne(){if(tabs.length===0){tabs.push({id:uid(),title:'Text',mode:'text',language:'plain',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH,wrapText:false});activeId=tabs[0].id}}
+    function ensureAtLeastOne(){
+      if(tabs.length===0){
+        tabs.push(createTabState('text','Text'));
+        activeId=tabs[0].id;
+      }
+    }
 
     function normalizeLoadedTab(rawTab){
       if(!rawTab || typeof rawTab!=='object')return null;
@@ -1208,9 +1235,7 @@
       if(mode==='text') title = getNextModeTabTitle('text','Text');
       else if(mode==='rich') title = getNextModeTabTitle('rich','Doc');
       else if(mode==='notepad') title = getNextModeTabTitle('notepad','Note');
-      const t={id:uid(),title,mode,language:'detect',content:'',theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH,wrapText:false};
-      if(mode==='notepad') t.notepadData=[];
-      if(globalTheme){t.theme=Object.assign({},globalTheme);} // inherit global
+      const t=createTabState(mode,title);
       tabs.push(t);
       activeId=t.id;
       renderTabs();
