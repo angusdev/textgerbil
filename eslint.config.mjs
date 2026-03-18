@@ -85,7 +85,7 @@ export default [
                 before: false,
                 after: true, // keeps `case 1:` spacing
                 overrides: {
-                    return: { after: false },
+                    return: { after: true },
                     throw: { after: false },
                     if: { after: false },
                     for: { after: false },
