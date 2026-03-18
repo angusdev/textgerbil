@@ -10,7 +10,8 @@ TextGerbil is a single-page, browser-only text editor implemented entirely in
 `index.html`. It is designed to run offline and store its state in
 `localStorage`. It supports multiple tabs and several editing modes. Live
 preview is available for Markdown/HTML text tabs, and for JSON when the
-JSON formatter library is available.
+JSON formatter library is available. JSON parsing prefers JSON5 when
+available (comments, trailing commas), with a JSON.parse fallback.
 
 ## High-Level Architecture
 
@@ -91,13 +92,14 @@ Global configuration includes:
   - `markdown`: preview rendered with `markdown-it` (`html: false`) and displayed in a sandboxed iframe.
   - `htmlmixed`: preview rendered in a sandboxed iframe.
   - `json`: preview rendered as a tree view via `json-formatter-js` when available.
+    Parsing prefers JSON5 (`window.JSON5.parse`) when present, otherwise `JSON.parse`.
   - other languages: preview unavailable.
 - **rich**: Quill editor with toolbar.
 - **notepad**: custom notes list, each note an independent textarea with a Markdown H1 as the title.
 - **Confirmation dialogs**: implemented via `confirmAction(title, message, onConfirm, targetEl)` using the native `<dialog>` API. When a `targetEl` is provided, the dialog dynamically positions itself intuitively just below the clicked element (e.g., under the close tab button, delete note button, or mode toggle) instead of defaulting to the center of the screen.
 
 Mode switching is managed via **toggle buttons** in the toolbar. The transition from `notepad` to `rich` mode is guarded by a confirmation prompt to prevent unintentional data loss. The language dropdown is visible in all modes but disabled for `rich` and `notepad`. 
-The preview toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` + `iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available.
+The preview toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` + `iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available (JSON5 parsing is optional if `window.JSON5` is present).
 Preview updates are debounced during typing to reduce iframe flicker.
 Dialogs feature **premium aesthetics**, including backdrop blur, smooth animations, and modern card styling.
 

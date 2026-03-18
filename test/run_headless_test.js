@@ -861,10 +861,17 @@ const { JSDOM } = require('jsdom');
       }
       w.__textgerbil.selectTab(previewTabId);
       const hasFormatter = !!w.JSONFormatter;
+      const hasJSON5 = !!(w.JSON5 && typeof w.JSON5.parse === 'function');
       previewToggle.click();
       if (hasFormatter) {
         assert(previewTab.previewVisible === true, 'Preview toggle works for JSON when formatter is available');
         assert(!!previewContent.querySelector('.json-formatter-row') || /Object/.test(previewContent.textContent || ''), 'JSON preview renders tree view');
+        if (hasJSON5) {
+          previewTab.content = '{\n  // comment\n  \"name\": \"textgerbil\",\n  \"items\": [1, 2,],\n}\n';
+          w.__textgerbil.updatePreview();
+          const errText = (previewContent.textContent || '').toLowerCase();
+          assert(!/invalid json/.test(errText), 'JSON5 content parses without error when JSON5 is available');
+        }
       } else {
         assert(previewTab.previewVisible === false, 'Preview toggle ignored for JSON when formatter is unavailable');
         assert(previewToggle.disabled === true, 'Preview button disabled for JSON when formatter is unavailable');

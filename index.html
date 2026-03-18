@@ -27,6 +27,8 @@
   <!-- json-formatter-js for JSON tree preview -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.23/dist/json-formatter.css">
   <script src="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.23/dist/json-formatter.umd.js"></script>
+  <!-- json5 for JSON5 parsing (comments, trailing commas, etc.) -->
+  <script src="https://unpkg.com/json5@2/dist/index.min.js"></script>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -623,6 +625,12 @@
       return map[ext] || 'plain';
     }
 
+    function normalizeCodeMirrorMode(lang){
+      if(lang==='java') return 'text/x-java';
+      if(lang==='json') return {name:'javascript', json:true};
+      return lang;
+    }
+
     function save(){
       localStorage.setItem(STORAGE_KEY,JSON.stringify({tabs,activeId}));
       if(globalTheme) localStorage.setItem(STORAGE_GLOBAL,JSON.stringify(globalTheme));
@@ -695,7 +703,8 @@
         document.getElementById('tabTitle').textContent=t.title;
         if(t.mode==='text' && t.language==='detect'){
           if(editors[t.id] && editors[t.id].cm){
-            editors[t.id].cm.setOption('mode',detectLanguageFromTitle(t.title));
+            const detected = detectLanguageFromTitle(t.title);
+            editors[t.id].cm.setOption('mode',normalizeCodeMirrorMode(detected));
           }
           updatePreview();
           applyPreviewVisibility(t);
@@ -1354,8 +1363,9 @@
     function buildPreviewSignature(tab,lang){
       const support = canUseSecureIframePreview() ? 'secure' : 'insecure';
       const mdReady = md ? 'md1' : 'md0';
-      const jsonReady = window.JSONFormatter ? 'json1' : 'json0';
-      return [tab.mode,lang,support,mdReady,jsonReady,tab.content || ''].join('|');
+      const jsonFormatterReady = window.JSONFormatter ? 'json1' : 'json0';
+      const json5Ready = (window.JSON5 && typeof window.JSON5.parse === 'function') ? 'json5' : 'json0';
+      return [tab.mode,lang,support,mdReady,jsonFormatterReady,json5Ready,tab.content || ''].join('|');
     }
 
     function updatePreview(force=false){
@@ -1397,7 +1407,8 @@
           const raw=t.content||'';
           try {
             pv.innerHTML='';
-            const parsed=JSON.parse(raw||'{}');
+            const parseFn = (window.JSON5 && typeof window.JSON5.parse === 'function') ? window.JSON5.parse : JSON.parse;
+            const parsed=parseFn(raw||'{}');
             if(window.JSONFormatter){
               const formatter=new window.JSONFormatter(parsed,1);
               pv.appendChild(formatter.render());
@@ -1409,7 +1420,7 @@
             const err=document.createElement('div');
             err.style.color='#b91c1c';
             err.style.marginBottom='8px';
-            err.textContent='Invalid JSON: '+(e && e.message ? e.message : 'parse error');
+            err.textContent='Invalid JSON/JSON5: '+(e && e.message ? e.message : 'parse error');
             const pre=document.createElement('pre');
             pre.style.whiteSpace='pre-wrap';
             pre.style.wordBreak='break-word';
@@ -1550,7 +1561,7 @@
       if(!t)return;
       let lang = t.language || 'detect';
       if(lang==='detect') lang=detectLanguageFromTitle(t.title);
-      if(lang==='java') lang='text/x-java';
+      lang=normalizeCodeMirrorMode(lang);
       const textEditorEl = document.getElementById('textEditor');
       textEditorEl.innerHTML='';
       // headless environment (tests) may set a flag to avoid CodeMirror's heavy logic
@@ -1791,14 +1802,16 @@
       let lang = t?t.language:'plain';
       if(lang==='detect') lang=detectLanguageFromTitle(t.title);
       const isHtmlOrMarkdown=!!(t && t.mode==='text' && (lang==='markdown' || lang==='htmlmixed'));
-      const jsonReady=!!window.JSONFormatter;
+      const jsonFormatterReady=!!window.JSONFormatter;
+      const json5Ready=!!(window.JSON5 && typeof window.JSON5.parse === 'function');
       const secureReady=canUseSecureIframePreview();
       if(canPreview){
         btn.title='Toggle preview';
       }else if(isHtmlOrMarkdown && !secureReady){
         btn.title='Preview disabled: browser lacks secure iframe support (sandbox + srcdoc)';
       }else {
-        btn.title=jsonReady?'Preview available only for Markdown/HTML/JSON':'Preview available only for Markdown/HTML (JSON formatter unavailable)';
+        const jsonLabel = json5Ready ? 'JSON/JSON5' : 'JSON';
+        btn.title=jsonFormatterReady?`Preview available only for Markdown/HTML/${jsonLabel}`:'Preview available only for Markdown/HTML (JSON formatter unavailable)';
       }
       const isVisible=!preview.classList.contains('hidden');
       btn.classList.toggle('is-active',isVisible);
@@ -1848,7 +1861,7 @@
         if(editors[t.id] && editors[t.id].cm){
           let realLang = t.language;
           if(realLang==='detect') realLang=detectLanguageFromTitle(t.title);
-          editors[t.id].cm.setOption('mode',realLang);
+          editors[t.id].cm.setOption('mode',normalizeCodeMirrorMode(realLang));
         }
         save();
         updatePreview();
