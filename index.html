@@ -218,10 +218,10 @@
           <button id="togglePreview" class="small" aria-label="Toggle preview" title="Preview">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
-          <button id="exportBtn" class="small" aria-label="Export file" title="Export">
+          <button id="exportBtn" class="small" aria-label="Export data" title="Export">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
           </button>
-          <button id="importBtn" class="small" aria-label="Import file" title="Import">
+          <button id="importBtn" class="small" aria-label="Import data" title="Import">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21V9"/><path d="m17 14-5-5-5 5"/><path d="M5 3h14"/></svg>
           </button>
           </div>
@@ -1970,12 +1970,19 @@
 
     // import/export helpers
     function exportCurrent(){
-      const t=tabs.find(x=>x.id===activeId);
-      if(!t)return;
-      const blob=new Blob([t.content||''],{type:'text/plain'});
+      save();
+      const dateStamp=new Date().toISOString().slice(0,10);
+      const payload={
+        version:1,
+        exportedAt:new Date().toISOString(),
+        tabs,
+        activeId,
+        globalTheme
+      };
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
       const a=document.createElement('a');
       a.href=URL.createObjectURL(blob);
-      a.download=(t.title||'untitled')+'.txt';
+      a.download=`textgerbil-${dateStamp}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
     }
@@ -1984,16 +1991,22 @@
       if(!file)return;
       const reader=new FileReader();
       reader.onload=()=>{
-        const text=reader.result;
-        // open in new tab
-        const newId=uid();
-        const t={id:newId,title:file.name,mode:'text',language:'detect',content:text,theme:{},previewVisible:false,previewWidth:DEFAULT_PREVIEW_WIDTH};
-        if(globalTheme) t.theme=Object.assign({},globalTheme);
-        tabs.push(t);
-        activeId=newId;
-        renderTabs();
-        selectTab(activeId);
-        save();
+        try {
+          const parsed=JSON.parse(reader.result||'{}');
+          if(!parsed || typeof parsed!=='object')throw new Error('Invalid export file');
+          if(!Array.isArray(parsed.tabs))throw new Error('Invalid export file');
+          const nextActiveId=parsed.activeId || (parsed.tabs[0] && parsed.tabs[0].id);
+          localStorage.setItem(STORAGE_KEY,JSON.stringify({tabs:parsed.tabs,activeId:nextActiveId}));
+          if(parsed.globalTheme && typeof parsed.globalTheme==='object'){
+            localStorage.setItem(STORAGE_GLOBAL,JSON.stringify(parsed.globalTheme));
+          }else {
+            localStorage.removeItem(STORAGE_GLOBAL);
+          }
+          window.location.reload();
+        }catch (err){
+          console.error(err);
+          window.alert('Import failed: invalid file.');
+        }
       };
       reader.readAsText(file);
       e.target.value='';

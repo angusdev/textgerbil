@@ -39,9 +39,9 @@ Live demo: https://angusdev.github.io/textgerbil
 5. Edit text – changes are saved automatically in local storage.
 6. **Rename a tab** by double-clicking the title area above the editor to edit inline.
    Press Enter or click elsewhere to confirm.
-7. Use the **Export** button (download icon) or `Ctrl/Cmd+S` to save the current tab to a
-   `.txt` file. Use the **Import** button (upload icon) or `Ctrl/Cmd+O` to open a local file in a new
-   tab.
+7. Use the **Export** button (download icon) or `Ctrl/Cmd+S` to save your Textgerbil data to a
+   `.json` file. Use the **Import** button (upload icon) or `Ctrl/Cmd+O` to load a previously exported
+   `.json` file (this replaces the current Textgerbil stored state).
 8. Click the **Settings** (Gear) button to adjust fonts and colors; you can apply the style to the current tab or globally.
 9. Close tabs with the `×` icon or `Ctrl/Cmd+W`. A confirmation dialog will protect you from accidental closures.
 
@@ -51,8 +51,8 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
 
 | Shortcut           | Action                     |
 |--------------------|----------------------------|
-| Ctrl/Cmd + S       | Export current tab         |
-| Ctrl/Cmd + O       | Import file (new tab)      |
+| Ctrl/Cmd + S       | Export data                |
+| Ctrl/Cmd + O       | Import data                |
 | Ctrl/Cmd + T       | New tab                    |
 | Ctrl/Cmd + W       | Close current tab          |
 
