@@ -20,7 +20,7 @@ Live demo: https://angusdev.github.io/textgerbil
 - Live preview for Markdown and HTML text tabs in a strict sandboxed iframe, plus JSON/JSON5 (comments, trailing commas) when the JSON formatter library is available (preview button is disabled otherwise)
 - Preview updates are debounced during typing to reduce flicker
 - Draggable preview pane width, stored per tab
-- Import and export files
+- Save/load files, export/import app data, and drag-and-drop file loading
 - Keyboard shortcuts (desktop style)
 - State persistence: tabs, contents, preview visibility, preview width, cursor/selection, themes, and mode-specific flags.
 - Runs entirely in one `index.html` file using CDN libraries
@@ -44,7 +44,8 @@ Live demo: https://angusdev.github.io/textgerbil
    - Rich mode saves an `.html` file.
    - Notes mode disables Save.
 8. Use the **Load** button (upload icon with arrow) to open a file into a new tab. If the file is `.html`,
-   TextGerbil will ask whether to open it as text or rich content.
+   TextGerbil will ask whether to open it as text or rich content. You can also drag and drop a file anywhere
+   on the page to load it.
 9. Use the **Export** button (download icon) or `Ctrl/Cmd+S` to save your Textgerbil data to a
    `.json` file. Use the **Import** button (upload icon) or `Ctrl/Cmd+O` to load a previously exported
    `.json` file (this replaces the current Textgerbil stored state).

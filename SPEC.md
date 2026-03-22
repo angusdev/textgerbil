@@ -81,7 +81,7 @@ Global configuration includes:
   element.
 - Editor initialization: `initCodeMirror`, `initQuill`.
 - Notepad helpers: `renderNotepad`, `addNote`, `removeNote`.
-- Import/export handlers and keyboard shortcuts.
+- Save/load handlers (file-based), drag-and-drop loading, and import/export handlers plus keyboard shortcuts.
 
 ## Editing Modes
 
@@ -164,7 +164,7 @@ for inline editing.
 ## Testing
 
 A comprehensive headless test suite (`test/run_headless_test.js`) uses `jsdom`
-to load `index.html` with a mocked `localStorage` and execute **130+ test cases**:
+to load `index.html` with a mocked `localStorage` and execute **170+ test cases**:
 
 **Test Coverage:**
 1. Tab management (create, switch, rename via API and UI double-click)
@@ -175,7 +175,7 @@ to load `index.html` with a mocked `localStorage` and execute **130+ test cases*
 6. Preview behavior (default off, per-tab persistence, Markdown/HTML/JSON-only enablement)
 7. `localStorage` initialization restore matrix (active tab recovery, defaults, theme/notes/content/cursor restore)
 8. Cursor/selection save and restore, including focus restore on tab switch
-9. Export function and keyboard shortcuts
+9. Save/load file flows, export/import data, and keyboard shortcuts
 10. Global API accessibility (`window.__textgerbil`)
 
 The suite is not a substitute for manual browser testing but effectively

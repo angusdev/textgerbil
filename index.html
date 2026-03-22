@@ -68,6 +68,7 @@
     .small:disabled:hover{background:#f1f5f9}
     .icon{width:14px;height:14px;display:inline-block}
     .toolbar-sep{width:1px;height:24px;background:#e2e8f0;border-radius:9999px;display:inline-block}
+    .drop-shield{position:fixed;inset:0;z-index:10050;background:transparent}
     #previewResizeHandle{width:12px;cursor:col-resize;position:relative;touch-action:none}
     #previewResizeHandle::before{content:'';position:absolute;left:5px;top:8px;bottom:8px;width:2px;border-radius:2px;background:#cbd5e1}
     #previewResizeHandle:hover::before{background:#2b8be6}
@@ -264,6 +265,7 @@
 
     </main>
 
+    <div id="dropShield" class="drop-shield hidden" aria-hidden="true"></div>
     <dialog id="confirmDialog" class="p-0 rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
       <div class="p-6 w-[340px] flex flex-col gap-4 bg-white">
         <div class="flex flex-col gap-2">
@@ -1998,6 +2000,45 @@
       const btn=document.getElementById('emojiBtn');
       if(btn) openEmojiPicker(btn);
     });
+    const dropShield=document.getElementById('dropShield');
+    if(dropShield){
+      let dropDepth=0;
+      const showDropShield=()=>{
+        dropShield.classList.remove('hidden');
+      };
+      const hideDropShield=()=>{
+        dropShield.classList.add('hidden');
+        dropDepth=0;
+      };
+      window.addEventListener('dragenter',(ev)=>{
+        ev.preventDefault();
+        dropDepth++;
+        showDropShield();
+      });
+      window.addEventListener('dragover',(ev)=>{
+        ev.preventDefault();
+        showDropShield();
+      });
+      window.addEventListener('dragleave',(ev)=>{
+        ev.preventDefault();
+        dropDepth=Math.max(0,dropDepth-1);
+        if(dropDepth===0) hideDropShield();
+      });
+      dropShield.addEventListener('dragover',(ev)=>{
+        ev.preventDefault();
+      });
+      dropShield.addEventListener('dragleave',(ev)=>{
+        ev.preventDefault();
+        dropDepth=Math.max(0,dropDepth-1);
+        if(dropDepth===0) hideDropShield();
+      });
+      dropShield.addEventListener('drop',(ev)=>{
+        ev.preventDefault();
+        hideDropShield();
+        const file=ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+        if(file) loadFileFromFile(file);
+      });
+    }
 
     // Initialization
     if(!load()){tabs=[];}
@@ -2080,13 +2121,12 @@
       URL.revokeObjectURL(a.href);
     }
 
-    function handleLoadFile(e){
-      const file=e.target.files[0];
+    function loadFileFromFile(file){
       if(!file)return;
       const reader=new FileReader();
       reader.onload=()=>{
         const text=reader.result||'';
-        const lower=file.name.toLowerCase();
+        const lower=(file.name||'').toLowerCase();
         if(lower.endsWith('.html')){
           chooseHtmlImportMode('Open HTML','Open this HTML file as text or rich content?',()=>{
             createFileTab('text',file.name,text);
@@ -2098,6 +2138,12 @@
         createFileTab('text',file.name,text);
       };
       reader.readAsText(file);
+    }
+
+    function handleLoadFile(e){
+      const file=e.target.files[0];
+      if(!file)return;
+      loadFileFromFile(file);
       e.target.value='';
     }
 
