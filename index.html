@@ -67,6 +67,7 @@
     .small:disabled{opacity:.45;color:#64748b;background:#f1f5f9;border-color:#e2e8f0;cursor:not-allowed;filter:saturate(.35)}
     .small:disabled:hover{background:#f1f5f9}
     .icon{width:14px;height:14px;display:inline-block}
+    .toolbar-sep{width:1px;height:24px;background:#e2e8f0;border-radius:9999px;display:inline-block}
     #previewResizeHandle{width:12px;cursor:col-resize;position:relative;touch-action:none}
     #previewResizeHandle::before{content:'';position:absolute;left:5px;top:8px;bottom:8px;width:2px;border-radius:2px;background:#cbd5e1}
     #previewResizeHandle:hover::before{background:#2b8be6}
@@ -218,15 +219,24 @@
           <button id="togglePreview" class="small" aria-label="Toggle preview" title="Preview">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
-          <button id="exportBtn" class="small" aria-label="Export data" title="Export">
+          <span class="toolbar-sep" aria-hidden="true"></span>
+          <button id="saveFileBtn" class="small" aria-label="Save file" title="Save">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
           </button>
-          <button id="importBtn" class="small" aria-label="Import data" title="Import">
+          <button id="loadFileBtn" class="small" aria-label="Load file" title="Load">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21V9"/><path d="m17 14-5-5-5 5"/><path d="M5 3h14"/></svg>
+          </button>
+          <span class="toolbar-sep" aria-hidden="true"></span>
+          <button id="exportBtn" class="small" aria-label="Export data" title="Export">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 14V4"/><path d="M8 8l4-4 4 4"/><path d="M4 14v6h16v-6"/></svg>
+          </button>
+          <button id="importBtn" class="small" aria-label="Import data" title="Import">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v10"/><path d="M16 10l-4 4-4-4"/><path d="M4 14v6h16v-6"/></svg>
           </button>
           </div>
           <div class="text-sm text-slate-600"><button id="themeBtn" class="small" aria-label="Settings" title="Settings"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
           <input type="file" id="importFile" class="hidden" accept="*/*" aria-hidden="true" />
+          <input type="file" id="loadFileInput" class="hidden" accept="*/*" aria-hidden="true" />
         </div>
         <div class="editor flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div id="textEditor" class="editor-instance active"></div>
@@ -262,6 +272,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button id="dialogCancel" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+          <button id="dialogAlt" class="hidden px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-all">Option</button>
           <button id="dialogConfirm" class="px-4 py-2 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 active:scale-95 rounded-xl shadow-lg shadow-rose-200 transition-all">Confirm</button>
         </div>
       </div>
@@ -307,22 +318,7 @@
       });
     }
 
-    function confirmAction(title,message,onConfirm,targetEl=null){
-      const d = document.getElementById('confirmDialog');
-      const tEl = document.getElementById('dialogTitle');
-      const mEl = document.getElementById('dialogMessage');
-      const cbtn = document.getElementById('dialogConfirm');
-      const xbtn = document.getElementById('dialogCancel');
-      tEl.textContent = title; mEl.textContent = message;
-      const onOk = ()=>{ onConfirm(); d.close(); cleanup(); };
-      const onNo = ()=>{ d.close(); cleanup(); };
-      const cleanup = ()=>{
-        cbtn.removeEventListener('click',onOk);
-        xbtn.removeEventListener('click',onNo);
-      };
-      cbtn.addEventListener('click',onOk);
-      xbtn.addEventListener('click',onNo);
-      
+    function positionDialog(d,targetEl){
       if(targetEl){
         const rect = targetEl.getBoundingClientRect();
         d.style.margin = '0';
@@ -337,7 +333,58 @@
         d.style.top = '';
         d.style.left = '';
       }
-      
+    }
+
+    function confirmAction(title,message,onConfirm,targetEl=null){
+      const d = document.getElementById('confirmDialog');
+      const tEl = document.getElementById('dialogTitle');
+      const mEl = document.getElementById('dialogMessage');
+      const cbtn = document.getElementById('dialogConfirm');
+      const xbtn = document.getElementById('dialogCancel');
+      const abtn = document.getElementById('dialogAlt');
+      tEl.textContent = title; mEl.textContent = message;
+      cbtn.textContent = 'Confirm';
+      xbtn.textContent = 'Cancel';
+      abtn.classList.add('hidden');
+      const onOk = ()=>{ onConfirm(); d.close(); cleanup(); };
+      const onNo = ()=>{ d.close(); cleanup(); };
+      const cleanup = ()=>{
+        cbtn.removeEventListener('click',onOk);
+        xbtn.removeEventListener('click',onNo);
+      };
+      cbtn.addEventListener('click',onOk);
+      xbtn.addEventListener('click',onNo);
+      positionDialog(d,targetEl);
+      d.showModal();
+    }
+
+    function chooseHtmlImportMode(title,message,onText,onRich,onCancel,targetEl=null){
+      const d = document.getElementById('confirmDialog');
+      const tEl = document.getElementById('dialogTitle');
+      const mEl = document.getElementById('dialogMessage');
+      const cbtn = document.getElementById('dialogConfirm');
+      const xbtn = document.getElementById('dialogCancel');
+      const abtn = document.getElementById('dialogAlt');
+      tEl.textContent = title; mEl.textContent = message;
+      cbtn.textContent = 'Rich';
+      abtn.textContent = 'Text';
+      xbtn.textContent = 'Cancel';
+      abtn.classList.remove('hidden');
+      const onOk = ()=>{ onRich(); d.close(); cleanup(); };
+      const onAlt = ()=>{ onText(); d.close(); cleanup(); };
+      const onNo = ()=>{ if(onCancel) onCancel(); d.close(); cleanup(); };
+      const cleanup = ()=>{
+        cbtn.removeEventListener('click',onOk);
+        abtn.removeEventListener('click',onAlt);
+        xbtn.removeEventListener('click',onNo);
+        cbtn.textContent = 'Confirm';
+        xbtn.textContent = 'Cancel';
+        abtn.classList.add('hidden');
+      };
+      cbtn.addEventListener('click',onOk);
+      abtn.addEventListener('click',onAlt);
+      xbtn.addEventListener('click',onNo);
+      positionDialog(d,targetEl);
       d.showModal();
     }
 
@@ -1159,6 +1206,7 @@
       applyThemeToEditor(t.theme);
       renderTabs();
       updatePreview();
+      syncFileButtons();
       save();
       // restore cursor and focus editor after rendering
       setTimeout(()=>restoreCursorAndFocus(t),50);
@@ -1902,6 +1950,9 @@
         }
       }
     }
+    document.getElementById('saveFileBtn').onclick=()=>saveFile();
+    document.getElementById('loadFileBtn').onclick=()=>document.getElementById('loadFileInput').click();
+    document.getElementById('loadFileInput').addEventListener('change',handleLoadFile);
     document.getElementById('exportBtn').onclick=()=>exportCurrent();
     document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
     document.getElementById('importFile').addEventListener('change',handleImport);
@@ -1967,8 +2018,97 @@
     selectTab(activeId);
     syncPreviewToggleState();
     syncWrapToggleState();
+    syncFileButtons();
 
     // import/export helpers
+    function ensureExtension(title,ext){
+      const base=(title||'untitled').trim()||'untitled';
+      const lower=base.toLowerCase();
+      if(lower.endsWith(ext.toLowerCase()))return base;
+      return base+ext;
+    }
+
+    function hasExtension(title){
+      const base=(title||'').trim();
+      if(!base)return false;
+      const dot=base.lastIndexOf('.');
+      if(dot<=0)return false;
+      return dot < base.length - 1;
+    }
+
+    function createFileTab(mode,title,content){
+      saveCurrentEditor();
+      const t=createTabState(mode,title);
+      if(mode==='text'){
+        t.language='detect';
+        t.content=content||'';
+      }else if(mode==='rich'){
+        t.content=content||'';
+      }
+      tabs.push(t);
+      activeId=t.id;
+      renderTabs();
+      selectTab(activeId);
+      save();
+    }
+
+    function saveFile(){
+      const t=tabs.find(x=>x.id===activeId);
+      if(!t || t.mode==='notepad')return;
+      saveCurrentEditor();
+      const dateStamp=new Date().toISOString().slice(0,10);
+      let content=t.content||'';
+      let ext='.txt';
+      if(t.mode==='rich'){
+        ext='.html';
+        const safeBody=content||'';
+        content='<!doctype html><html><head><meta charset="utf-8"></head><body>'+safeBody+'</body></html>';
+      }
+      let filename;
+      if(t.mode==='rich'){
+        filename=ensureExtension(t.title || `textgerbil-${dateStamp}`,ext);
+      }else {
+        const baseTitle=(t.title||'').trim();
+        filename=hasExtension(baseTitle) ? baseTitle : ensureExtension(baseTitle || `textgerbil-${dateStamp}`,ext);
+      }
+      const type=t.mode==='rich' ? 'text/html' : 'text/plain';
+      const blob=new Blob([content],{type});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function handleLoadFile(e){
+      const file=e.target.files[0];
+      if(!file)return;
+      const reader=new FileReader();
+      reader.onload=()=>{
+        const text=reader.result||'';
+        const lower=file.name.toLowerCase();
+        if(lower.endsWith('.html')){
+          chooseHtmlImportMode('Open HTML','Open this HTML file as text or rich content?',()=>{
+            createFileTab('text',file.name,text);
+          },()=>{
+            createFileTab('rich',file.name,text);
+          },null);
+          return;
+        }
+        createFileTab('text',file.name,text);
+      };
+      reader.readAsText(file);
+      e.target.value='';
+    }
+
+    function syncFileButtons(){
+      const btn=document.getElementById('saveFileBtn');
+      if(!btn)return;
+      const t=tabs.find(x=>x.id===activeId);
+      btn.disabled=!!(t && t.mode==='notepad');
+      btn.title=btn.disabled ? 'Save (not available in Notes)' : 'Save';
+    }
+
     function exportCurrent(){
       save();
       const dateStamp=new Date().toISOString().slice(0,10);

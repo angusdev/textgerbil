@@ -443,6 +443,38 @@ const { JSDOM } = require('jsdom');
       }
       assert(getWriteCount(STORAGE_KEY) > writesBeforeNoteEdit, 'Notepad edit triggers autosave');
 
+      // Test 18b: Save disabled on notepad
+      const saveFileBtn = doc.getElementById('saveFileBtn');
+      assert(!!saveFileBtn, 'Save file button exists');
+      w.__textgerbil.newTab('notepad');
+      const noteSaveTabId = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1].id;
+      w.__textgerbil.selectTab(noteSaveTabId);
+      assert(saveFileBtn.disabled === true, 'Save disabled for notepad tab');
+
+      // Test 18c: HTML load prompts mode choice and cancel does nothing
+      const loadFileInput = doc.getElementById('loadFileInput');
+      assert(!!loadFileInput, 'Load file input exists');
+      const tabsBeforeHtmlLoad = w.__textgerbil.tabs.length;
+      const htmlFile = new w.File(['<p>Hello</p>'], 'sample.html', { type: 'text/html' });
+      Object.defineProperty(loadFileInput, 'files', { value: [htmlFile], configurable: true });
+      loadFileInput.dispatchEvent(new w.Event('change'));
+      const dialog = doc.getElementById('confirmDialog');
+      const dialogAlt = doc.getElementById('dialogAlt');
+      const waitFor = async (predicate, tries = 20) => {
+        for (let i = 0; i < tries; i++) {
+          if (predicate()) return true;
+          await new Promise(r => w.setTimeout(r, 0));
+        }
+        return false;
+      };
+      const dialogOpened = await waitFor(() => dialog.open === true);
+      assert(dialogOpened, 'HTML load opens mode chooser');
+      assert(!dialogAlt.classList.contains('hidden'), 'HTML load shows mode choice buttons');
+      const dialogCancel = doc.getElementById('dialogCancel');
+      dialogCancel.click();
+      await new Promise(r => w.setTimeout(r, 0));
+      assert(w.__textgerbil.tabs.length === tabsBeforeHtmlLoad, 'Canceling HTML load keeps tab count unchanged');
+
       // Test 19: Tab switching
       const tabs = doc.querySelectorAll('.tab');
       assert(tabs.length >= 1, `Tabs exist (found ${tabs.length})`);
