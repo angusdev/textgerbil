@@ -66,6 +66,7 @@ Global configuration includes:
 
 
 - `uid()` - generate unique identifiers.
+- `getActiveTab()` - return the currently active tab object (`tabs.find(x=>x.id===activeId)`); use this instead of repeating the find pattern.
 - `save()` / `load()` - persist and restore state from `localStorage`.
 - `renderTabs()` - redraw the tab bar.
   While dragging a tab, the tab bar shows a snap indicator for the prospective insert position (before/after) so the target slot is visible before drop.
@@ -82,6 +83,25 @@ Global configuration includes:
 - Editor initialization: `initCodeMirror`, `initQuill`.
 - Notepad helpers: `renderNotepad`, `addNote`, `removeNote`.
 - Save/load handlers (file-based), drag-and-drop loading, and import/export handlers plus keyboard shortcuts.
+
+### Pure Functions (no DOM dependency — unit-testable)
+
+These functions take only plain values and return plain values, making them independently testable:
+
+| Function | Signature |
+|----------|-----------|
+| `uid()` | `() → string` |
+| `getDefaultTitleForMode(mode)` | `(string) → string` |
+| `getDefaultLanguageForMode(mode)` | `(string) → string` |
+| `getNextModeTabTitle(tabsList, mode, baseTitle)` | `(Tab[], string, string) → string` |
+| `normalizeCodeMirrorMode(lang)` | `(string) → string\|object` |
+| `normalizeLoadedTab(rawTab)` | `(object) → Tab\|null` |
+| `isMeaningfulRichContent(html)` | `(string) → boolean` |
+| `ensureExtension(title, ext)` | `(string, string) → string` |
+| `hasExtension(title)` | `(string) → boolean` |
+| `isEditableTarget(el)` | `(Element\|null) → boolean` |
+| `clampPreviewWidthForTab(tab, width)` | `(Tab\|null, number) → number` |
+| `createTabState(mode, title)` | `(string, string) → Tab` |
 
 ## Editing Modes
 
@@ -163,25 +183,50 @@ for inline editing.
 
 ## Testing
 
-A comprehensive headless test suite (`test/run_headless_test.js`) uses `jsdom`
-to load `index.html` with a mocked `localStorage` and execute **170+ test cases**:
+The project has two complementary test layers:
+
+### Unit Tests (`test/unit/`, 13 files)
+
+Pure-function tests that run in Node with no DOM or JSDOM required. Each file
+extracts one or more functions directly from `index.html` via `test/unit/extractor.js`
+and runs assertions with Node's built-in `assert` module.
+
+```bash
+npm run test:unit
+```
+
+Functions covered:
+`uid`, `detectLanguageFromTitle`, `normalizeCodeMirrorMode`, `normalizeLoadedTab`,
+`getDefaultTitleForMode`, `getDefaultLanguageForMode`, `getNextModeTabTitle`,
+`isMeaningfulRichContent`, `ensureExtension`, `hasExtension`,
+`createTabState`, `clampPreviewWidthForTab`, `isEditableTarget`
+
+### Headless Integration Tests (`test/run_headless_test.js`, **169 assertions**)
+
+Loads `index.html` in `jsdom` with a mocked `localStorage`. A shared
+`applyJsdomPolyfills()` helper stubs `getBoundingClientRect`, `execCommand`,
+`requestAnimationFrame`, and the native `<dialog>` API.
+
+```bash
+npm run test:headless
+```
 
 **Test Coverage:**
 1. Tab management (create, switch, rename via API and UI double-click)
-2. All editor modes (text, rich, notepad) and language switching in text mode
-3. Content editing and storage per mode
-4. Notepad operations (add/edit notes)
-5. Theme settings (panel open, apply to current tab, apply globally)
-6. Preview behavior (default off, per-tab persistence, Markdown/HTML/JSON-only enablement)
-7. `localStorage` initialization restore matrix (active tab recovery, defaults, theme/notes/content/cursor restore)
-8. Cursor/selection save and restore, including focus restore on tab switch
-9. Save/load file flows, export/import data, and keyboard shortcuts
-10. Global API accessibility (`window.__textgerbil`)
+2. Tab drag-and-drop reordering
+3. All editor modes (text, rich, notepad) and language switching
+4. Content editing and storage per mode
+5. Close-confirm behavior for all three modes
+6. Notepad operations (add/edit/delete notes)
+7. Theme settings (panel open, apply to current tab, apply globally)
+8. Autosave on edits, tab switches, language/theme changes, and rename
+9. Preview behavior (default off, per-tab persistence, Markdown/HTML/JSON enablement, iframe sandboxing, CSP validation)
+10. `localStorage` initialization restore matrix (active tab recovery, defaults, theme/notes/content/cursor restore)
+11. Cursor/selection save and restore, focus restore on tab switch
+12. Save/load file flows, export/import data, and keyboard shortcuts
+13. Global `window.__textgerbil` API accessibility
 
-The suite is not a substitute for manual browser testing but effectively
-catches syntax errors, runtime issues, and feature regressions.
-
-To run:
+To run all tests:
 
 ```bash
 nvm use
@@ -190,8 +235,7 @@ npm test
 ```
 
 Expected output: `Failed: 0`
-
-## Modification Guidelines for AI
+w## Modification Guidelines for AI
 
 **Important for AI Assistants:** You MUST run `npm run lint:fix` after EACH AND EVERY change you make to the code to ensure the compact style is maintained and all linting issues are resolved. Do not wait for multiple changes to accumulate before linting.
 **CRITICAL LLM INSTRUCTION (DO NOT AUTO COMMIT):** You must NEVER automatically run `git commit` or auto-commit any code changes. ONLY execute a commit if the user EXPLICITLY asks you to do so (e.g., "commit").
@@ -200,16 +244,22 @@ Expected output: `Failed: 0`
    function responsibilities.
 2. **Avoid reordering or rewriting structure**: keep `index.html` as one file
    unless explicitly instructed to split.
-3. **When adding features**:
+3. **Prefer `getActiveTab()`**: use the helper instead of repeating
+   `tabs.find(x=>x.id===activeId)` inline.
+4. **Keep pure functions pure**: functions in the "Pure Functions" table above
+   must not reference DOM globals (`document`, `window`). Pass any required
+   state as parameters so they remain unit-testable.
+5. **When adding features**:
    - Define new state fields with defaults in `newTab()` or when loading.
    - Add corresponding UI elements in the HTML near existing analogous
      controls.
    - Update `save()`/`load()` if new state must persist.
    - Write helper functions for new behaviour and register event listeners
      in the UI wiring section.
-4. **Keep CDNs alive**: if you add new libraries, use `<script>` tags with
+   - Add a unit test if the new logic is a pure function.
+6. **Keep CDNs alive**: if you add new libraries, use `<script>` tags with
    `src` attributes; no local module bundling.
-5. **Use existing patterns**: theme application, cursor storage, and editor
+7. **Use existing patterns**: theme application, cursor storage, and editor
    initialization are good templates to follow.
 
 This specification should help any AI understand the current implementation

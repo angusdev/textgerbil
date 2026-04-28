@@ -74,24 +74,34 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
 
 1. The file is self-contained; to make edits, modify `index.html`.
 2. Use Node.js 24 (`nvm use` reads `.nvmrc`).
-3. Install dependencies and run the headless test suite:
+3. Install dependencies and run the full test suite:
    ```bash
    npm install
-   npm test
+   npm test          # runs both unit and headless tests
+   npm run test:unit      # pure-function unit tests only
+   npm run test:headless  # JSDOM integration tests only
    ```
-   The test suite (`test/run_headless_test.js`) currently includes **120+ test cases** covering:
-   - Tab creation, switching, and renaming (both API and UI double-click)
-   - Tab switching restores focus and prior cursor/selection position
-   - Initialization from `localStorage` across multiple saved-state combinations
-   - All 3 editor modes (text editing, rich text, notepad)
-   - Content editing and storage per mode
-   - Notepad operations (adding and editing notes)
-   - Theme settings (open, configure, apply to current or all tabs)
-   - Preview sidebar behavior, including Markdown/HTML/JSON-only enablement
-   - File export and keyboard shortcuts
-   - Global API exposure for programmatic use
-   
-   All tests pass with a mocked `localStorage` for reliable JSDOM execution.
+
+### Unit Tests (`test/unit/`, 13 files)
+
+Pure-function tests that run directly in Node with no DOM. Covers:
+- `uid`, `detectLanguageFromTitle`, `normalizeCodeMirrorMode`, `normalizeLoadedTab`
+- `getDefaultTitleForMode`, `getDefaultLanguageForMode`, `getNextModeTabTitle`
+- `isMeaningfulRichContent`, `ensureExtension`, `hasExtension`
+- `createTabState`, `clampPreviewWidthForTab`, `isEditableTarget`
+
+### Headless Integration Tests (`test/run_headless_test.js`, **169 assertions**)
+
+Loads `index.html` in jsdom with a mocked `localStorage`. Covers:
+- Tab creation, switching, and renaming (API and UI double-click)
+- Tab drag-and-drop reordering
+- Tab switching restores focus and prior cursor/selection position
+- Initialization from `localStorage` across multiple saved-state combinations
+- All 3 editor modes (text, rich text, notepad) including close-confirm behavior
+- Autosave on edits, tab switches, language/theme changes, and rename
+- Preview sidebar (Markdown/HTML/JSON enablement, iframe sandboxing, CSP validation)
+- File save/load, export/import, keyboard shortcuts
+- Global `window.__textgerbil` API exposure
 
 ## Compatibility
 

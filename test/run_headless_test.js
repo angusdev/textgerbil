@@ -14,34 +14,38 @@ const { JSDOM } = require('jsdom');
     }
   });
 
+  function applyJsdomPolyfills(domInstance) {
+    const win = domInstance.window;
+    win.Element.prototype.getBoundingClientRect = function(){
+      return {x:0,y:0,left:0,top:0,right:0,bottom:0,width:0,height:0};
+    };
+    if(!win.document.execCommand){
+      win.document.execCommand = () => false;
+    }
+    if(!win.requestAnimationFrame){
+      win.requestAnimationFrame = (cb)=>win.setTimeout(()=>cb(Date.now()),0);
+    }
+    if(!win.cancelAnimationFrame){
+      win.cancelAnimationFrame = (id)=>win.clearTimeout(id);
+    }
+    // Polyfill <dialog> for JSDOM
+    const dialogProto = win.Element.prototype;
+    if (!dialogProto.showModal) {
+      dialogProto.showModal = function() { this.setAttribute('open', ''); this.open = true; };
+    }
+    if (!dialogProto.close) {
+      dialogProto.close = function() { this.removeAttribute('open'); this.open = false; };
+    }
+    if (!('open' in dialogProto)) {
+      Object.defineProperty(dialogProto, 'open', {
+        get() { return this.hasAttribute('open'); },
+        set(val) { if(val) this.setAttribute('open', ''); else this.removeAttribute('open'); }
+      });
+    }
+  }
+
   // stub missing DOM APIs that CodeMirror/Quill call in jsdom
-  dom.window.Element.prototype.getBoundingClientRect = function(){
-    return {x:0,y:0,left:0,top:0,right:0,bottom:0,width:0,height:0};
-  };
-  if(!dom.window.document.execCommand){
-    dom.window.document.execCommand = () => false;
-  }
-  if(!dom.window.requestAnimationFrame){
-    dom.window.requestAnimationFrame = (cb)=>dom.window.setTimeout(()=>cb(Date.now()),0);
-  }
-  if(!dom.window.cancelAnimationFrame){
-    dom.window.cancelAnimationFrame = (id)=>dom.window.clearTimeout(id);
-  }
-  
-  // Polyfill <dialog> for JSDOM
-  const dialogProto = dom.window.Element.prototype;
-  if (!dialogProto.showModal) {
-    dialogProto.showModal = function() { this.setAttribute('open', ''); this.open = true; };
-  }
-  if (!dialogProto.close) {
-    dialogProto.close = function() { this.removeAttribute('open'); this.open = false; };
-  }
-  if (!('open' in dialogProto)) {
-    Object.defineProperty(dialogProto, 'open', {
-      get() { return this.hasAttribute('open'); },
-      set(val) { if(val) this.setAttribute('open', ''); else this.removeAttribute('open'); }
-    });
-  }
+  applyJsdomPolyfills(dom);
 
   // Mock localStorage to avoid JSDOM SecurityError
   const mockLocalStorage = {
@@ -114,18 +118,7 @@ const { JSDOM } = require('jsdom');
             Object.defineProperty(window, 'localStorage', { value: mock });
           }
         });
-        scenarioDom.window.Element.prototype.getBoundingClientRect = function(){
-          return {x:0,y:0,left:0,top:0,right:0,bottom:0,width:0,height:0};
-        };
-        if(!scenarioDom.window.document.execCommand){
-          scenarioDom.window.document.execCommand = () => false;
-        }
-        if(!scenarioDom.window.requestAnimationFrame){
-          scenarioDom.window.requestAnimationFrame = (cb)=>scenarioDom.window.setTimeout(()=>cb(Date.now()),0);
-        }
-        if(!scenarioDom.window.cancelAnimationFrame){
-          scenarioDom.window.cancelAnimationFrame = (id)=>scenarioDom.window.clearTimeout(id);
-        }
+        applyJsdomPolyfills(scenarioDom);
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => reject(new Error(`${name} timed out waiting for load`)), 3000);
           scenarioDom.window.addEventListener('load', () => {
@@ -293,46 +286,18 @@ const { JSDOM } = require('jsdom');
       }
       closeActiveTabAndCheck(false, 'rich Quill placeholder markup closes without confirmation');
 
-      // Test 3: Language switching - plain to javascript
+      // Test 3-8: Language switching via UI dropdown (parameterized)
       w.__textgerbil.selectTab(defaultAddedTab.id);
-      doc.getElementById('languageSelect').value = 'javascript';
-      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
       const activeTabIdForLanguageTests = defaultAddedTab.id;
       const t = w.__textgerbil.tabs.find(x => x.id === activeTabIdForLanguageTests);
-      assert(t && t.language === 'javascript', 'Language switched to javascript');
+      const languagesToTest = ['javascript', 'python', 'markdown', 'htmlmixed', 'css', 'json'];
+      languagesToTest.forEach(lang => {
+        doc.getElementById('languageSelect').value = lang;
+        doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
+        assert(t && t.language === lang, `Language switched to ${lang}`);
+      });
 
-      // Test 4: Language switching - javascript to python
-      doc.getElementById('languageSelect').value = 'python';
-      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
-      assert(t && t.language === 'python', 'Language switched to python');
-
-      // Test 5: Language switching - python to markdown
-      doc.getElementById('languageSelect').value = 'markdown';
-      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
-      assert(t && t.language === 'markdown', 'Language switched to markdown');
-
-      // Test 6: Language switching - markdown to htmlmixed
-      doc.getElementById('languageSelect').value = 'htmlmixed';
-      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
-      assert(t && t.language === 'htmlmixed', 'Language switched to htmlmixed');
-
-      // Test 7: Language switching - htmlmixed to css
-      doc.getElementById('languageSelect').value = 'css';
-      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
-      assert(t && t.language === 'css', 'Language switched to css');
-
-      // Test 8: Language switching - css to json
-      doc.getElementById('languageSelect').value = 'json';
-      doc.getElementById('languageSelect').dispatchEvent(new w.Event('change'));
-      assert(t && t.language === 'json', 'Language switched to json');
-
-      // Test 9: Language auto-detection from filename
-      const autoDetected = w.__textgerbil.detectLanguageFromTitle('script.js');
-      assert(autoDetected === 'javascript', 'Auto-detects JavaScript from .js extension');
-      const mdDetected = w.__textgerbil.detectLanguageFromTitle('readme.md');
-      assert(mdDetected === 'markdown', 'Auto-detects Markdown from .md extension');
-      const htmlDetected = w.__textgerbil.detectLanguageFromTitle('page.html');
-      assert(htmlDetected === 'htmlmixed', 'Auto-detects HTML from .html extension');
+      // Note: Language auto-detection from filename is covered by unit tests (detectLanguageFromTitle.test.js)
 
       // Test 10: Theme settings - open panel
       doc.getElementById('themeBtn').click();

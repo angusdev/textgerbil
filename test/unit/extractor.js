@@ -5,14 +5,35 @@ function getFunctions() {
   const htmlPath = path.resolve(__dirname, '../../index.html');
   const html = fs.readFileSync(htmlPath, 'utf8');
   
-  const functionNames = ['uid', 'detectLanguageFromTitle', 'normalizeLoadedTab'];
+  const functionNames = [
+    'uid',
+    'detectLanguageFromTitle',
+    'normalizeCodeMirrorMode',
+    'normalizeLoadedTab',
+    'getDefaultTitleForMode',
+    'getDefaultLanguageForMode',
+    'getNextModeTabTitle',
+    'isMeaningfulRichContent',
+    'ensureExtension',
+    'hasExtension',
+    'isEditableTarget',
+    'clampPreviewWidthForTab',
+    'createTabState'
+  ];
   const context = {
     MIN_PREVIEW_WIDTH: 260,
     DEFAULT_PREVIEW_WIDTH: 360,
     MIN_EDITOR_WIDTH: 320,
     Math,
     Date,
-    Object
+    Object,
+    Number,
+    Array,
+    String,
+    RegExp,
+    parseInt: Number.parseInt,
+    globalTheme: null,
+    document: { querySelector: () => null }
   };
   
   functionNames.forEach(name => {
@@ -39,6 +60,7 @@ function getFunctions() {
     
     if (endIdx !== -1) {
       const fnCode = html.substring(startIdx, endIdx + 1);
+      // Provide already-extracted functions as available in scope
       const fn = new Function(...Object.keys(context), `return (${fnCode})`);
       context[name] = fn(...Object.values(context));
     }

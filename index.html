@@ -300,7 +300,7 @@
       {label:'Symbols',items:['❤️','🧡','💛','💚','💙','💜','🖤','🤍','☑️','☀️','⚠️','🚫','➕','➖','➡️','⬅️']}
     ]
     const ADD_PLUS_ICON_SVG = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
-    const ADD_MODE_ICONS = {
+    const MODE_ICONS = {
       text: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
       rich: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
       notepad: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 2h8v4H8z"/><path d="M6 6h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>'
@@ -315,7 +315,7 @@
         }
         if(type==='mode'){
           const mode = el.dataset.modeIcon || 'text';
-          el.innerHTML = ADD_MODE_ICONS[mode] || ADD_MODE_ICONS.text;
+          el.innerHTML = MODE_ICONS[mode] || MODE_ICONS.text;
         }
       });
     }
@@ -429,7 +429,7 @@
     }
 
     function insertEmojiIntoTextEditor(emoji){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t || t.mode!=='text')return false;
       const ed = editors[t.id];
       if(!ed || !ed.cm || typeof ed.cm.replaceSelection!=='function')return false;
@@ -442,7 +442,7 @@
     }
 
     function insertEmojiIntoRichEditor(emoji){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t || t.mode!=='rich')return false;
       const ed = editors[t.id];
       if(!ed || !ed.quill)return false;
@@ -529,6 +529,8 @@
 
 
     function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+
+    function getActiveTab(){return tabs.find(x=>x.id===activeId)||null}
 
     function initMarkdownIt(){
       if(!md && window.markdownit) md = window.markdownit('commonmark',{html: false,breaks: true})
@@ -1124,9 +1126,7 @@
     }
 
     function getTabModeIconSvg(mode){
-      if(mode==='rich')return '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-      if(mode==='notepad')return '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 2h8v4H8z"/><path d="M6 6h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>';
-      return '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+      return MODE_ICONS[mode] || MODE_ICONS.text;
     }
 
     function renderTabs(){
@@ -1255,9 +1255,9 @@
       }
     }
 
-    function getNextModeTabTitle(mode,baseTitle){
+    function getNextModeTabTitle(tabsList,mode,baseTitle){
       let maxSuffix = -1;
-      tabs.forEach(tab=>{
+      tabsList.forEach(tab=>{
         if(!tab || tab.mode!==mode)return;
         const title = typeof tab.title==='string' ? tab.title.trim() : '';
         if(title === baseTitle){
@@ -1287,9 +1287,9 @@
     function newTab(mode='text'){
       saveCurrentEditor();
       let title = getDefaultTitleForMode(mode);
-      if(mode==='text') title = getNextModeTabTitle('text','Text');
-      else if(mode==='rich') title = getNextModeTabTitle('rich','Doc');
-      else if(mode==='notepad') title = getNextModeTabTitle('notepad','Note');
+      if(mode==='text') title = getNextModeTabTitle(tabs,'text','Text');
+      else if(mode==='rich') title = getNextModeTabTitle(tabs,'rich','Doc');
+      else if(mode==='notepad') title = getNextModeTabTitle(tabs,'notepad','Note');
       const t=createTabState(mode,title);
       tabs.push(t);
       activeId=t.id;
@@ -1383,7 +1383,7 @@
     }
 
     function saveCurrentEditor(){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t)return;
       if(t.mode==='notepad') t.content = '';
       else t.content = getEditorContent();
@@ -1418,7 +1418,7 @@
         clearTimeout(previewDebounceTimer);
         previewDebounceTimer = null;
       }
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       const pv=document.getElementById('previewContent');
       if(!t||!pv)return;
       if(!force){
@@ -1483,7 +1483,7 @@
 
     // notepad helpers
     function renderNotepad(){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       const container=document.getElementById('notesContainer');
       container.innerHTML='';
       if(!t.notepadData) t.notepadData=[];
@@ -1548,7 +1548,7 @@
     }
     function addNote(){
       saveCurrentEditor();
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t.notepadData) t.notepadData=[];
       const id=uid();
       t.notepadData.push({id,title:'',text:'',_new:true}); // add to end
@@ -1556,7 +1556,7 @@
       renderNotepad();
     }
     function removeNote(id,targetEl = null){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t || !t.notepadData)return;
       const executeRemove = ()=>{
         t.notepadData=t.notepadData.filter(n=>n.id!==id);
@@ -1572,7 +1572,7 @@
     }
 
     function getEditorContent(){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t)return '';
       const ed = editors[t.id] || {};
       if(t.mode==='text' && ed.cm)return ed.cm.getValue();
@@ -1582,7 +1582,7 @@
     }
 
     function setEditorContent(content){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t)return;
       const ed = editors[t.id] = editors[t.id] || {};
       if(t.mode==='text'){
@@ -1744,7 +1744,7 @@
 
       handle.addEventListener('pointerdown',(ev)=>{
         if(ev.button !== 0)return;
-        const t=tabs.find(x=>x.id===activeId);
+        const t=getActiveTab();
         const preview=document.getElementById('preview');
         if(!t || !canTabPreview(t) || !preview || preview.classList.contains('hidden'))return;
         dragging = true;
@@ -1757,7 +1757,7 @@
 
       handle.addEventListener('pointermove',(ev)=>{
         if(!dragging || (pointerId!==null && ev.pointerId!==pointerId))return;
-        const t=tabs.find(x=>x.id===activeId);
+        const t=getActiveTab();
         if(!t || !canTabPreview(t))return;
         const mainRect = main.getBoundingClientRect();
         const desiredWidth = mainRect.right - ev.clientX;
@@ -1806,7 +1806,7 @@
     function applyThemeToEditor(theme){
       if(!theme)return;
       // determine which element is currently visible for styling
-      const t = tabs.find(x=>x.id===activeId);
+      const t = getActiveTab();
       if(!t)return;
       let target = null;
       if(t.mode==='text'){
@@ -1829,7 +1829,7 @@
 
     // helpers
     function populateThemeInputs(){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       const theme = t && t.theme ? t.theme : globalTheme || {};
       document.getElementById('fontFamily').value=theme.fontFamily||'';
       document.getElementById('fontSize').value=theme.fontSize||14;
@@ -1841,7 +1841,7 @@
       const preview=document.getElementById('preview');
       const btn=document.getElementById('togglePreview');
       if(!preview||!btn)return;
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       const canPreview=canTabPreview(t);
       btn.disabled=!canPreview;
       let lang = t?t.language:'plain';
@@ -1866,7 +1866,7 @@
     function syncWrapToggleState(){
       const btn=document.getElementById('toggleWrap');
       if(!btn)return;
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       const canWrap=!!(t && t.mode==='text');
       btn.disabled=!canWrap;
       const isActive=!!(t && t.wrapText);
@@ -1897,7 +1897,7 @@
     });
     document.getElementById('addNoteBtn').addEventListener('click',()=>{addNote()});
     document.getElementById('languageSelect').addEventListener('change',e=>{
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(t && t.mode==='text'){
         t.language=e.target.value;
         if(!canTabPreview(t)){
@@ -1915,7 +1915,7 @@
       }
     })
     document.getElementById('togglePreview').onclick=()=>{
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!canTabPreview(t))return;
       t.previewVisible = !t.previewVisible;
       applyPreviewVisibility(t);
@@ -1924,7 +1924,7 @@
       syncPreviewToggleState();
     }
     document.getElementById('toggleWrap').onclick=()=>{
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t || t.mode!=='text')return;
       t.wrapText = !t.wrapText;
       const ed = editors[t.id];
@@ -1964,7 +1964,7 @@
       p.style.display=p.style.display==='none'?'block':'none';
     }
     document.getElementById('applyTheme').onclick=()=>{
-      const t=tabs.find(x=>x.id===activeId);if(!t)return;
+      const t=getActiveTab();if(!t)return;
       t.theme={fontFamily:document.getElementById('fontFamily').value,fontSize:document.getElementById('fontSize').value,bg:document.getElementById('bgColor').value,fg:document.getElementById('fgColor').value};
       applyThemeToEditor(t.theme);save();
     }
@@ -1972,7 +1972,7 @@
       const theme={fontFamily:document.getElementById('fontFamily').value,fontSize:document.getElementById('fontSize').value,bg:document.getElementById('bgColor').value,fg:document.getElementById('fgColor').value};
       tabs.forEach(t=>t.theme=Object.assign({},theme));
       globalTheme=Object.assign({},theme);
-      applyThemeToEditor(tabs.find(x=>x.id===activeId).theme);
+      applyThemeToEditor(getActiveTab().theme);
       save();
     }
     document.addEventListener('click',(ev)=>{
@@ -2052,7 +2052,7 @@
       });
     }
     ensureAtLeastOne();
-    if(!tabs.find(x=>x.id===activeId)) activeId=tabs[0].id;
+    if(!getActiveTab()) activeId=tabs[0].id;
     initMarkdownIt();
     initPreviewResize();
     renderTabs();
@@ -2094,7 +2094,7 @@
     }
 
     function saveFile(){
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       if(!t || t.mode==='notepad')return;
       saveCurrentEditor();
       const dateStamp=new Date().toISOString().slice(0,10);
@@ -2150,7 +2150,7 @@
     function syncFileButtons(){
       const btn=document.getElementById('saveFileBtn');
       if(!btn)return;
-      const t=tabs.find(x=>x.id===activeId);
+      const t=getActiveTab();
       btn.disabled=!!(t && t.mode==='notepad');
       btn.title=btn.disabled ? 'Save (not available in Notes)' : 'Save';
     }
@@ -2232,11 +2232,11 @@
       setPreviewSupportOverride:(override)=>{previewSupportOverride=override||null; syncPreviewToggleState(); updatePreview();},
       setMarkdownRendererForTest:(renderer)=>{md=renderer||null; updatePreview();},
       getActiveTabPreviewWidth:()=>{
-        const t=tabs.find(x=>x.id===activeId);
+        const t=getActiveTab();
         return t ? t.previewWidth : null;
       },
       setActiveTabPreviewWidth:(width)=>{
-        const t=tabs.find(x=>x.id===activeId);
+        const t=getActiveTab();
         if(!t)return;
         t.previewWidth = clampPreviewWidthForTab(t,width);
         applyPreviewWidth(t);
