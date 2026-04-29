@@ -12,12 +12,14 @@ Live demo: https://angusdev.github.io/textgerbil
 
 ## Features
 
-- Multi-tab editing with 3 modes per tab:
+- Multi-tab editing with 4 modes per tab:
   - Text editing
   - Rich Text (Quill editor)
   - Notepad (multiple short notes in one tab)
+  - Slides (Markdown deck split into slides by each `#` heading)
 - Themes (font family, size, background/foreground) per-tab or globally
 - Live preview for Markdown and HTML text tabs in a strict sandboxed iframe, plus JSON/JSON5 (comments, trailing commas) when the JSON formatter library is available (preview button is disabled otherwise)
+- Slide preview for Markdown slide tabs as a vertical list of sandboxed slide iframes, plus present mode for one-slide-at-a-time playback
 - Preview updates are debounced during typing to reduce flicker
 - Draggable preview pane width, stored per tab
 - Save/load files, export/import app data, and drag-and-drop file loading
@@ -34,7 +36,7 @@ Live demo: https://angusdev.github.io/textgerbil
    browser (Chrome, Firefox, Edge, Safari).
 2. The first tab appears automatically; use the **New tab** button (plus icon) or
    `Ctrl/Cmd+T` to create additional tabs.
-3. Change the editor mode (Text, Rich, or Notes) using the **toggle buttons** in the toolbar.
+3. Add Text, Rich, Notes, or Slides tabs from the new-tab menu.
 4. Toggle the preview sidebar with the **Preview** (Eye) button.
 5. Edit text – changes are saved automatically in local storage.
 6. **Rename a tab** by double-clicking the title area above the editor to edit inline.
@@ -42,6 +44,7 @@ Live demo: https://angusdev.github.io/textgerbil
 7. Use the **Save** button (floppy icon) to save the current tab to a file:
    - Text mode saves a `.txt` file.
    - Rich mode saves an `.html` file.
+   - Slides mode saves a `.md` file.
    - Notes mode disables Save.
 8. Use the **Load** button (upload icon with arrow) to open a file into a new tab. If the file is `.html`,
    TextGerbil will ask whether to open it as text or rich content. You can also drag and drop a file anywhere
@@ -53,6 +56,7 @@ Live demo: https://angusdev.github.io/textgerbil
 11. Close tabs with the `×` icon or `Ctrl/Cmd+W`. A confirmation dialog will protect you from accidental closures.
 
 The notepad mode lets you keep a list of mini-notes inside a single tab.
+The slide mode treats Markdown as a deck: each level-one heading (`#`) starts a new slide. The preview button shows the deck as a vertical slide list, and the present button opens a focused presentation view with previous/next controls.
 
 ## Keyboard Shortcuts
 
@@ -65,8 +69,8 @@ The notepad mode lets you keep a list of mini-notes inside a single tab.
 
 ## Security
 
-- HTML and Markdown previews run in a sandboxed `iframe` with no `allow-*` permissions.
-- The preview document uses a strict `Content-Security-Policy` (`default-src 'none'`) to block scripts, network access, and active content by default.
+- HTML, Markdown, and slide previews run in sandboxed `iframe`s with no `allow-*` permissions.
+- The preview document uses a strict `Content-Security-Policy` (`default-src 'none'`) to block scripts, active content, and unneeded network access by default. Slide images allow `data:`, `https:`, and `http:` sources so Markdown image links can render.
 - Markdown preview uses `markdown-it` with raw HTML disabled (`html: false`), so raw HTML is escaped instead of executed.
 - If the browser does not support required secure iframe features (`sandbox` + `srcdoc`), HTML/Markdown preview is disabled and the UI shows a clear explanation (`Secure preview unavailable`).
 

@@ -33,6 +33,12 @@ try {
   const norm4 = normalizeLoadedTab(raw4);
   assert.strictEqual(norm4.language, 'plain', 'Rich mode should default language to plain');
 
+  // Test Case 4b: Slide mode forces Markdown
+  const raw4b = { mode: 'slide', language: 'python' };
+  const norm4b = normalizeLoadedTab(raw4b);
+  assert.strictEqual(norm4b.mode, 'slide', 'Slide mode should be valid');
+  assert.strictEqual(norm4b.language, 'markdown', 'Slide mode should force markdown language');
+
   // Test Case 5: Preserve existing valid field
   const raw5 = { previewWidth: 500 };
   const norm5 = normalizeLoadedTab(raw5);

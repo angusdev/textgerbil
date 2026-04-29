@@ -32,7 +32,7 @@ Each tab object has the following shape:
 {
   id: string,          // unique identifier
   title: string,       // shown in tab label
-  mode: string,        // one of: text, rich, notepad
+  mode: string,        // one of: text, rich, notepad, slide
   language: string,    // text mode language (detect, plain, javascript, python, markdown, htmlmixed, css, json, sql, shell, xml, java, yaml)
   content: string,     // raw text/HTML stored
   theme: {             // optional styling overrides
@@ -116,10 +116,11 @@ These functions take only plain values and return plain values, making them inde
   - other languages: preview unavailable.
 - **rich**: Quill editor with toolbar.
 - **notepad**: custom notes list, each note an independent textarea with a Markdown H1 as the title.
+- **slide**: CodeMirror-backed Markdown slide deck. The mode only uses Markdown (`language: "markdown"`), and each level-one heading (`#`) starts a new slide. The preview button renders the deck as a vertical scroll list of sandboxed slide iframes. The present button opens a focused presentation overlay that advances one slide at a time with buttons or keyboard arrows. Slide headings keep a fixed font size, while the remaining slide body receives a deterministic zoom scale based on the amount of Markdown content so dense slides fit the 16:9 page. Slide iframes keep `sandbox=""`; their CSP allows `data:`, `https:`, and `http:` images for Markdown image support, while scripts and active content remain blocked.
 - **Confirmation dialogs**: implemented via `confirmAction(title, message, onConfirm, targetEl)` using the native `<dialog>` API. When a `targetEl` is provided, the dialog dynamically positions itself intuitively just below the clicked element (e.g., under the close tab button, delete note button, or mode toggle) instead of defaulting to the center of the screen.
 
 Mode switching is managed via **toggle buttons** in the toolbar. The transition from `notepad` to `rich` mode is guarded by a confirmation prompt to prevent unintentional data loss. The language dropdown is visible in all modes but disabled for `rich` and `notepad`. 
-The preview toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` + `iframe.sandbox`), and for `json` only when `window.JSONFormatter` is available (JSON5 parsing is optional if `window.JSON5` is present).
+The preview toggle is enabled for `text` mode with `markdown`/`htmlmixed` only when secure iframe preview support is available (`HTMLIFrameElement` + `iframe.srcdoc` + `iframe.sandbox`), for `slide` mode when the same secure iframe support is available, and for `json` only when `window.JSONFormatter` is available (JSON5 parsing is optional if `window.JSON5` is present).
 Preview updates are debounced during typing to reduce iframe flicker.
 Dialogs feature **premium aesthetics**, including backdrop blur, smooth animations, and modern card styling.
 

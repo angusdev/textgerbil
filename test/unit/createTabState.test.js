@@ -32,6 +32,13 @@ try {
   assert.strictEqual(noteTab.language, 'plain', 'notepad language defaults to plain');
   assert.deepStrictEqual(noteTab.notepadData, [], 'notepad has empty notepadData array');
 
+  // Slide tab defaults
+  const slideTab = createTabState('slide', 'Slides');
+  assert.strictEqual(slideTab.mode, 'slide', 'mode is slide');
+  assert.strictEqual(slideTab.language, 'markdown', 'slide tab language defaults to markdown');
+  assert.strictEqual(slideTab.content, '', 'slide tab starts empty');
+  assert.strictEqual(slideTab.notepadData, undefined, 'slide tab has no notepadData');
+
   // Unique IDs
   const tab1 = createTabState('text', 'A');
   const tab2 = createTabState('text', 'B');

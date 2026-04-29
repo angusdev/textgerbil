@@ -12,6 +12,8 @@ try {
     'rich mode defaults to Doc');
   assert.strictEqual(getDefaultTitleForMode('notepad'), 'Note',
     'notepad mode defaults to Note');
+  assert.strictEqual(getDefaultTitleForMode('slide'), 'Slides',
+    'slide mode defaults to Slides');
   assert.strictEqual(getDefaultTitleForMode('unknown'), 'Text',
     'unknown mode falls back to Text');
   assert.strictEqual(getDefaultTitleForMode(undefined), 'Text',

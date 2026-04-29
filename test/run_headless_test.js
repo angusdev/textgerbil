@@ -155,7 +155,7 @@ const { JSDOM } = require('jsdom');
       };
       const editModeTab = (tab, mode, value) => {
         w.__textgerbil.selectTab(tab.id);
-        if (mode === 'text') {
+        if (mode === 'text' || mode === 'slide') {
           const ed = w.__textgerbil.editors[tab.id];
           if (ed && ed.cm) ed.cm.setValue(value);
           return;
@@ -174,7 +174,7 @@ const { JSDOM } = require('jsdom');
       };
       const clearModeTab = (tab, mode) => {
         w.__textgerbil.selectTab(tab.id);
-        if (mode === 'text') {
+        if (mode === 'text' || mode === 'slide') {
           const ed = w.__textgerbil.editors[tab.id];
           if (ed && ed.cm) ed.cm.setValue('');
           return;
@@ -213,13 +213,13 @@ const { JSDOM } = require('jsdom');
       assert(defaultAddedTab && defaultAddedTab.mode === 'text', 'Default add button creates text mode tab');
       assert(defaultAddedTab && defaultAddedTab.title === 'Text 1', 'Default add button names next text tab Text 1');
 
-      // Test 2b: Add tabs from dropdown for all three modes
+      // Test 2b: Add tabs from dropdown for all modes
       const addToggleBtn = doc.getElementById('addTabToggle');
       const addMenuEl = doc.getElementById('addTabMenu');
       const openAddMenu = () => {
         if (addMenuEl && addMenuEl.classList.contains('hidden')) addToggleBtn.click();
       };
-      ['text', 'rich', 'notepad'].forEach(mode => {
+      ['text', 'rich', 'notepad', 'slide'].forEach(mode => {
         const countBefore = w.__textgerbil.tabs.length;
         openAddMenu();
         const opt = doc.querySelector(`#addTabMenu .add-tab-option[data-mode="${mode}"]`);
@@ -263,8 +263,41 @@ const { JSDOM } = require('jsdom');
       const secondNamedNote = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
       assert(secondNamedNote && secondNamedNote.title === 'Note 3', 'New notepad tab uses highest existing Note suffix plus one');
 
+      // Test 2b-4: Slide tabs use Markdown, H1 slide splitting, preview list, and present mode
+      const firstNamedSlide = w.__textgerbil.tabs.find(tab => tab.mode === 'slide' && tab.title === 'Slides');
+      if (firstNamedSlide) firstNamedSlide.title = 'Slides 8';
+      w.__textgerbil.newTab('slide');
+      const slideTab = w.__textgerbil.tabs[w.__textgerbil.tabs.length - 1];
+      assert(slideTab && slideTab.title === 'Slides 9', 'New slide tab uses highest existing Slides suffix plus one');
+      assert(slideTab && slideTab.language === 'markdown', 'Slide tab language is fixed to Markdown');
+      w.__textgerbil.selectTab(slideTab.id);
+      assert(doc.getElementById('languageSelect').disabled === true, 'Language selector is disabled for slide mode');
+      slideTab.content = '# Intro\n\n![Tiny](data:image/png;base64,abc)\n\n[Site](https://example.com)\n\n# Second\n\nMore text';
+      const parsedSlides = w.__textgerbil.splitMarkdownSlides(slideTab.content);
+      assert(parsedSlides.length === 2, 'Slide markdown splits on level-one headings');
+      w.__textgerbil.setPreviewSupportOverride({ supportsIframe: true, supportsSrcdoc: true, supportsSandbox: true });
+      doc.getElementById('togglePreview').click();
+      const slideFrames = doc.querySelectorAll('#previewContent .slide-preview-frame');
+      assert(slideFrames.length === 2, 'Slide preview renders a vertical iframe list');
+      const firstSlideSrcdoc = slideFrames[0] && (slideFrames[0].getAttribute('srcdoc') || '');
+      assert(firstSlideSrcdoc.includes('img-src data: https: http:'), 'Slide CSP supports data-url and linked images');
+      assert(firstSlideSrcdoc.includes('target="_blank"'), 'Slide markdown links render as HTML links');
+      assert(firstSlideSrcdoc.includes('font-size:min(var(--title-size),5vw)'), 'Slide title font is small and width-aware');
+      const denseSlideSrcdoc = w.__textgerbil.buildSandboxedSlideSrcdoc(`# ${'Long title '.repeat(8)}\n\n${'Dense slide content '.repeat(120)}`);
+      assert(/--title-size:18px/.test(denseSlideSrcdoc), 'Long slide titles use a smaller title size');
+      assert(/--body-scale:0\.[0-9]+/.test(denseSlideSrcdoc), 'Dense slide content is zoomed down to fit');
+      w.__textgerbil.openSlidePresentMode();
+      const presentOverlay = doc.getElementById('slidePresentOverlay');
+      const presentFrame = doc.getElementById('slidePresentFrame');
+      assert(presentOverlay && !presentOverlay.classList.contains('hidden'), 'Present mode opens for slide tabs');
+      assert(presentFrame && (presentFrame.getAttribute('srcdoc') || '').includes('Intro'), 'Present mode shows the first slide');
+      doc.getElementById('slideNextBtn').click();
+      assert(presentFrame && (presentFrame.getAttribute('srcdoc') || '').includes('Second'), 'Present mode advances one slide at a time');
+      w.__textgerbil.closeSlidePresentMode();
+      assert(presentOverlay && presentOverlay.classList.contains('hidden'), 'Present mode closes');
+
       // Test 2c: Close-confirm behavior for all three modes
-      ['text', 'rich', 'notepad'].forEach(mode => {
+      ['text', 'rich', 'notepad', 'slide'].forEach(mode => {
         const emptyTab = createModeTab(mode);
         closeActiveTabAndCheck(false, `${mode} empty tab closes without confirmation`);
 

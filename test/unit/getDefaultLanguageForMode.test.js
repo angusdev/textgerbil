@@ -12,6 +12,8 @@ try {
     'rich mode defaults to plain');
   assert.strictEqual(getDefaultLanguageForMode('notepad'), 'plain',
     'notepad mode defaults to plain');
+  assert.strictEqual(getDefaultLanguageForMode('slide'), 'markdown',
+    'slide mode defaults to markdown');
   assert.strictEqual(getDefaultLanguageForMode('unknown'), 'plain',
     'unknown mode defaults to plain');
   assert.strictEqual(getDefaultLanguageForMode(undefined), 'plain',
