@@ -1,12 +1,14 @@
 # TextGerbil
 
+---
+
 **A Single-File, Browser-Based Text Editor**
 
 Everything saves to localStorage. No server. No installation.
 
----
-
 # What is TextGerbil?
+
+---
 
 TextGerbil is a lightweight, single-file web editor that runs entirely in your browser.
 
@@ -17,9 +19,9 @@ TextGerbil is a lightweight, single-file web editor that runs entirely in your b
 
 Perfect for quick note-taking, coding, and documentation.
 
----
-
 # Key Features
+
+---
 
 ✨ **Multi-Tab Support**
 - Create unlimited tabs
@@ -32,9 +34,9 @@ Perfect for quick note-taking, coding, and documentation.
 - Notepad (quick notes)
 - Slides (Markdown deck)
 
----
-
 # Editing Modes Explained
+
+---
 
 **Text Mode**: Code or plain text with syntax highlighting (JavaScript, Python, HTML, CSS, JSON, SQL, YAML, etc.)
 
@@ -44,9 +46,9 @@ Perfect for quick note-taking, coding, and documentation.
 
 **Slides Mode**: Markdown becomes a presentation deck. Each `#` heading starts a new slide.
 
----
-
 # Live Preview
+
+---
 
 - **Text & Markdown**: See formatted output in a live preview panel
 - **HTML**: Preview your markup in a sandboxed iframe
@@ -55,9 +57,9 @@ Perfect for quick note-taking, coding, and documentation.
 
 All preview panels are draggable—resize them to your preference.
 
----
-
 # Themes & Customization
+
+---
 
 Customize per-tab or globally:
 - Font family (serif, monospace, sans-serif)
@@ -67,9 +69,9 @@ Customize per-tab or globally:
 
 Settings persist across sessions.
 
----
-
 # Save & Export
+
+---
 
 📥 **Save Current Tab**
 - Text tab → `.txt` file
@@ -80,9 +82,9 @@ Settings persist across sessions.
 - Save entire TextGerbil state to `.json`
 - Import `.json` to restore everything
 
----
-
 # Keyboard Shortcuts
+
+---
 
 | Shortcut | Action |
 |----------|--------|
@@ -97,6 +99,8 @@ Double-click tab title to rename inline.
 
 # Presentation Mode
 
+---
+
 When viewing Slides:
 
 1. Click the **Preview** button (eye icon) to see the deck
@@ -106,9 +110,9 @@ When viewing Slides:
 
 Perfect for presentations, tutorials, or slide decks.
 
----
-
 # Security First
+
+---
 
 🔒 HTML and Markdown previews run in sandboxed iframes
 
@@ -118,9 +122,9 @@ Perfect for presentations, tutorials, or slide decks.
 
 🔒 Slide images support `data:`, `https:`, and `http:` URLs safely
 
----
-
 # Getting Started
+
+---
 
 1. Download or clone the repository
 2. Open `index.html` in any modern browser
@@ -130,15 +134,58 @@ Perfect for presentations, tutorials, or slide decks.
 
 No dependencies. No build process. Just open and code.
 
----
-
 # Built with TextGerbil
+
+---
 
 This very slide deck was created in TextGerbil's Slides mode!
 
 Each `#` heading becomes a new slide. Edit the Markdown, see the deck update instantly. Present it with the Present button.
 
 Simple. Fast. Effective.
+
+---
+
+# Images in Present Mode
+
+---
+
+Slides support embedded images via:
+- **Data URLs** (SVG, PNG, JPG)
+- **HTTPS URLs** (external links)
+- **HTTP URLs** (local/friendly servers)
+
+All rendered in a secure sandbox with strict CSP.
+
+Example with an embedded SVG:
+
+<svg width="200" height="300" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bulb glass -->
+  <ellipse cx="100" cy="110" rx="60" ry="80" fill="#FFD966" stroke="#E6B800" stroke-width="3"/>
+
+  <!-- Bulb highlight -->
+  <ellipse cx="75" cy="85" rx="20" ry="30" fill="#FFF2B3" opacity="0.6"/>
+
+  <!-- Neck -->
+  <rect x="75" y="180" width="50" height="30" fill="#E6B800"/>
+
+  <!-- Screw base -->
+  <rect x="70" y="210" width="60" height="50" fill="#666"/>
+  <line x1="70" y1="220" x2="130" y2="220" stroke="#999" stroke-width="3"/>
+  <line x1="70" y1="235" x2="130" y2="235" stroke="#999" stroke-width="3"/>
+  <line x1="70" y1="250" x2="130" y2="250" stroke="#999" stroke-width="3"/>
+
+  <!-- Filament -->
+  <path d="M85 140 Q100 160 115 140" stroke="#CC9900" stroke-width="3" fill="none"/>
+  <line x1="85" y1="140" x2="85" y2="160" stroke="#CC9900" stroke-width="2"/>
+  <line x1="115" y1="140" x2="115" y2="160" stroke="#CC9900" stroke-width="2"/>
+</svg>
+
+Test with external image:
+
+![External](https://angusdev.github.io/textgerbil/images/textgerbil.png)
+
+Perfect for diagrams, logos, and visual content!
 
 ---
 

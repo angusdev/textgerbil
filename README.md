@@ -20,6 +20,7 @@ Live demo: https://angusdev.github.io/textgerbil
 - Themes (font family, size, background/foreground) per-tab or globally
 - Live preview for Markdown and HTML text tabs in a strict sandboxed iframe, plus JSON/JSON5 (comments, trailing commas) when the JSON formatter library is available (preview button is disabled otherwise)
 - Slide preview for Markdown slide tabs as a vertical list of sandboxed slide iframes, plus present mode for one-slide-at-a-time playback
+- Slide images support `data:`, `https:`, and `http:` sources in Markdown image syntax
 - Preview updates are debounced during typing to reduce flicker
 - Draggable preview pane width, stored per tab
 - Save/load files, export/import app data, and drag-and-drop file loading
@@ -38,8 +39,9 @@ Live demo: https://angusdev.github.io/textgerbil
    `Ctrl/Cmd+T` to create additional tabs.
 3. Add Text, Rich, Notes, or Slides tabs from the new-tab menu.
 4. Toggle the preview sidebar with the **Preview** (Eye) button.
-5. Edit text – changes are saved automatically in local storage.
-6. **Rename a tab** by double-clicking the title area above the editor to edit inline.
+5. Slide mode supports Markdown image syntax, including embedded `data:` URLs and external `https:`/`http:` images.
+6. Edit text – changes are saved automatically in local storage.
+7. **Rename a tab** by double-clicking the title area above the editor to edit inline.
    Press Enter or click elsewhere to confirm.
 7. Use the **Save** button (floppy icon) to save the current tab to a file:
    - Text mode saves a `.txt` file.
@@ -70,9 +72,9 @@ The slide mode treats Markdown as a deck: each level-one heading (`#`) starts a 
 ## Security
 
 - HTML, Markdown, and slide previews run in sandboxed `iframe`s with no `allow-*` permissions.
-- The preview document uses a strict `Content-Security-Policy` (`default-src 'none'`) to block scripts, active content, and unneeded network access by default. Slide images allow `data:`, `https:`, and `http:` sources so Markdown image links can render.
-- Markdown preview uses `markdown-it` with raw HTML disabled (`html: false`), so raw HTML is escaped instead of executed.
-- If the browser does not support required secure iframe features (`sandbox` + `srcdoc`), HTML/Markdown preview is disabled and the UI shows a clear explanation (`Secure preview unavailable`).
+- The preview document uses a strict `Content-Security-Policy` (`default-src 'none'`) to block scripts, active content, and unneeded network access by default. Slide image rendering allows `data:`, `https:`, and `http:` sources so Markdown image links can render.
+- Markdown preview uses `markdown-it` with HTML enabled (`html: true`) so Markdown can include inline HTML and data URL assets; the sandboxed iframe/CSP contain any rendered content.
+- If the browser does not support required secure iframe features (`sandbox` + `srcdoc`), HTML/Markdown/slide preview is disabled and the UI shows a clear explanation (`Secure preview unavailable`).
 
 ## Development / Testing
 

@@ -10,8 +10,10 @@ TextGerbil is a single-page, browser-only text editor implemented entirely in
 `index.html`. It is designed to run offline and store its state in
 `localStorage`. It supports multiple tabs and several editing modes. Live
 preview is available for Markdown/HTML text tabs, and for JSON when the
-JSON formatter library is available. JSON parsing prefers JSON5 when
-available (comments, trailing commas), with a JSON.parse fallback.
+JSON formatter library is available. Slide mode supports Markdown-based decks
+with inline images from `data:`, `https:`, and `http:` sources inside
+sandboxed previews. JSON parsing prefers JSON5 when available (comments,
+trailing commas), with a JSON.parse fallback.
 
 ## High-Level Architecture
 
@@ -116,7 +118,7 @@ These functions take only plain values and return plain values, making them inde
   - other languages: preview unavailable.
 - **rich**: Quill editor with toolbar.
 - **notepad**: custom notes list, each note an independent textarea with a Markdown H1 as the title.
-- **slide**: CodeMirror-backed Markdown slide deck. The mode only uses Markdown (`language: "markdown"`), and each level-one heading (`#`) starts a new slide. The preview button renders the deck as a vertical scroll list of sandboxed slide iframes. The present button opens a focused presentation overlay that advances one slide at a time with buttons or keyboard arrows. Slide headings keep a fixed font size, while the remaining slide body receives a deterministic zoom scale based on the amount of Markdown content so dense slides fit the 16:9 page. Slide iframes keep `sandbox=""`; their CSP allows `data:`, `https:`, and `http:` images for Markdown image support, while scripts and active content remain blocked.
+- **slide**: CodeMirror-backed Markdown slide deck. The mode only uses Markdown (`language: "markdown"`), and each level-one heading (`#`) starts a new slide. The preview button renders the deck as a vertical scroll list of sandboxed slide iframes. The present button opens a focused presentation overlay that advances one slide at a time with buttons or keyboard arrows. Slide headings keep a fixed font size, while the remaining slide body receives a deterministic zoom scale based on the amount of Markdown content so dense slides fit the 16:9 page. Slide iframes are sandboxed and use a strict CSP that allows inline images from `data:`, `https:`, and `http:` sources, with scripts and active content blocked.
 - **Confirmation dialogs**: implemented via `confirmAction(title, message, onConfirm, targetEl)` using the native `<dialog>` API. When a `targetEl` is provided, the dialog dynamically positions itself intuitively just below the clicked element (e.g., under the close tab button, delete note button, or mode toggle) instead of defaulting to the center of the screen.
 
 Mode switching is managed via **toggle buttons** in the toolbar. The transition from `notepad` to `rich` mode is guarded by a confirmation prompt to prevent unintentional data loss. The language dropdown is visible in all modes but disabled for `rich` and `notepad`. 
@@ -139,10 +141,8 @@ To preserve the multi-note structure when switching to **Text** mode or persisti
   - `sandbox=""` (no `allow-*` permissions)
   - `referrerPolicy="no-referrer"`
   - strict inline CSP (`default-src 'none'`, no script execution, no network)
-- Raw Markdown HTML is disabled (`markdown-it` with `html: false`) to prevent
-  untrusted raw HTML from being interpreted as active content.
-- If required secure iframe capabilities are unavailable, HTML/Markdown preview
-  is blocked and the preview panel renders a human-readable error message.
+- Markdown previews use `markdown-it` with HTML enabled (`html: true`) to support inline HTML and embedded assets such as `data:` image URLs. This is safe because all rendered content is contained within the sandboxed iframe and enforced by CSP.
+- If required secure iframe capabilities are unavailable, HTML/Markdown/slide preview is blocked and the preview panel renders a human-readable error message.
 
 ## Themes
 
