@@ -693,21 +693,21 @@
     function getSlideParts(markdown){
       const source = String(markdown || '').trim() || '# Untitled Slide';
       let comment = {};
-      let contentStart = 0;
-      // Check if starts with <!--
-      const commentStart = source.indexOf('<!--');
-      if(commentStart >= 0){
-        const commentEnd = source.indexOf('-->',commentStart);
-        if(commentEnd > commentStart){
-          const commentText = source.substring(commentStart + 4,commentEnd).trim();
-          comment = parseComment(commentText);
-          contentStart = commentEnd + 3;
-          // Skip whitespace after -->
-          while(contentStart < source.length && /\s/.test(source[contentStart])) contentStart++;
-        }
+      let cleanSource = source;
+      // Parse all HTML comments and extract properties
+      const commentRegex = /<!--([\s\S]*?)-->/g;
+      let match;
+      while((match = commentRegex.exec(source)) !== null){
+        const commentText = match[1].trim();
+        const props = parseComment(commentText);
+        comment = Object.assign(comment,props);
+        // Remove the comment from cleanSource
+        cleanSource = cleanSource.replace(match[0],'');
       }
-      const content = source.substring(contentStart);
-      const lines = content.split(/\r?\n/);
+      // Clean up extra whitespace
+      cleanSource = cleanSource.trim();
+      if(!cleanSource) cleanSource = '# Untitled Slide';
+      const lines = cleanSource.split(/\r?\n/);
       let title = 'Untitled Slide';
       let titleIndex = -1;
       for(let i=0;i<lines.length;i++){

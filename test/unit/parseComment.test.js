@@ -51,7 +51,9 @@ Some body text.`,
       }
     },
     {
-      input: '# No Comment\n\nBody here.',
+      input: `# No Comment
+
+Body here.`,
       expected: {
         title: 'No Comment',
         body: 'Body here.',
@@ -59,14 +61,24 @@ Some body text.`,
       }
     },
     {
-      input: `<!-- comment -->
-# Title
+      input: `# Title
 
+<!-- comment -->
 Body`,
       expected: {
         title: 'Title',
         body: 'Body',
         comment: {}
+      }
+    },
+    {
+      input: `# Title
+
+Some text <!-- fit-to-page: false --> more text.`,
+      expected: {
+        title: 'Title',
+        body: 'Some text  more text.',
+        comment: { 'fit-to-page': 'false' }
       }
     }
   ];
