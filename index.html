@@ -676,9 +676,38 @@
         .replace(/'/g,'&#39;');
     }
 
+    function parseComment(commentText){
+      const props = {};
+      const lines = commentText.split('\n');
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if(trimmed.includes(':')){
+          const [key, ...valueParts] = trimmed.split(':');
+          const value = valueParts.join(':').trim();
+          props[key.trim()] = value;
+        }
+      });
+      return props;
+    }
+
     function getSlideParts(markdown){
       const source = String(markdown || '').trim() || '# Untitled Slide';
-      const lines = source.split(/\r?\n/);
+      let comment = {};
+      let contentStart = 0;
+      // Check if starts with <!--
+      const commentStart = source.indexOf('<!--');
+      if(commentStart >= 0){
+        const commentEnd = source.indexOf('-->', commentStart);
+        if(commentEnd > commentStart){
+          const commentText = source.substring(commentStart + 4, commentEnd).trim();
+          comment = parseComment(commentText);
+          contentStart = commentEnd + 3;
+          // Skip whitespace after -->
+          while(contentStart < source.length && /\s/.test(source[contentStart])) contentStart++;
+        }
+      }
+      const content = source.substring(contentStart);
+      const lines = content.split(/\r?\n/);
       let title = 'Untitled Slide';
       let titleIndex = -1;
       for(let i=0;i<lines.length;i++){
@@ -692,7 +721,7 @@
       const bodyLines = titleIndex >= 0
         ? lines.slice(0,titleIndex).concat(lines.slice(titleIndex + 1))
         : lines;
-      return {title,body:bodyLines.join('\n').trim()};
+      return {title, body: bodyLines.join('\n').trim(), comment};
     }
 
     const defaultSlideTheme = {
@@ -709,7 +738,8 @@
       return Object.assign({},defaultSlideTheme,overrides||{});
     }
 
-    function calculateSlideBodyScale(markdown,width,height){
+    function calculateSlideBodyScale(markdown,width,height,fitToPage=true){
+      if(!fitToPage) return 1;
       const parts = getSlideParts(markdown);
       const theme = getSlideTheme();
       const paddingVertical = height * 0.048;
@@ -766,9 +796,10 @@
       return Math.max(0.38,Math.min(1,scale));
     }
 
-    function estimateSlideBodyScale(markdown,width,height){
+    function estimateSlideBodyScale(markdown,width,height,fitToPage=true){
+      if(!fitToPage) return 1;
       if(Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0){
-        return calculateSlideBodyScale(markdown,width,height);
+        return calculateSlideBodyScale(markdown,width,height,fitToPage);
       }
       const body = getSlideParts(markdown).body;
       if(!body)return 1;
@@ -796,8 +827,12 @@
 
     function buildSandboxedSlideSrcdoc(markdown,width,height,bodyOverflow='overflow:hidden'){
       const parts = getSlideParts(markdown);
-      const scale = estimateSlideBodyScale(markdown,width,height);
-      const theme = getSlideTheme();
+      const fitToPage = parts.comment['fit-to-page'] !== 'false';
+      const scale = estimateSlideBodyScale(markdown,width,height,fitToPage);
+      const themeOverrides = {};
+      if(parts.comment['line-height']) themeOverrides.contentLineHeight = parts.comment['line-height'];
+      if(parts.comment['font-size']) themeOverrides.contentFontSize = parts.comment['font-size'];
+      const theme = getSlideTheme(themeOverrides);
       let titleSize = Math.max(18, Math.round(width * 0.06));
       if(parts.title.length > 40) titleSize = 18;
       const htmlBody = renderSlideMarkdown(parts.body);

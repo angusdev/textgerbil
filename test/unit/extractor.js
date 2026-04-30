@@ -18,7 +18,9 @@ function getFunctions() {
     'hasExtension',
     'isEditableTarget',
     'clampPreviewWidthForTab',
-    'createTabState'
+    'createTabState',
+    'parseComment',
+    'getSlideParts'
   ];
   const context = {
     MIN_PREVIEW_WIDTH: 260,
