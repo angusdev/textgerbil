@@ -679,10 +679,10 @@
     function parseComment(commentText){
       const props = {};
       const lines = commentText.split('\n');
-      lines.forEach(line => {
+      lines.forEach(line=>{
         const trimmed = line.trim();
         if(trimmed.includes(':')){
-          const [key, ...valueParts] = trimmed.split(':');
+          const [key,...valueParts] = trimmed.split(':');
           const value = valueParts.join(':').trim();
           props[key.trim()] = value;
         }
@@ -697,9 +697,9 @@
       // Check if starts with <!--
       const commentStart = source.indexOf('<!--');
       if(commentStart >= 0){
-        const commentEnd = source.indexOf('-->', commentStart);
+        const commentEnd = source.indexOf('-->',commentStart);
         if(commentEnd > commentStart){
-          const commentText = source.substring(commentStart + 4, commentEnd).trim();
+          const commentText = source.substring(commentStart + 4,commentEnd).trim();
           comment = parseComment(commentText);
           contentStart = commentEnd + 3;
           // Skip whitespace after -->
@@ -721,7 +721,7 @@
       const bodyLines = titleIndex >= 0
         ? lines.slice(0,titleIndex).concat(lines.slice(titleIndex + 1))
         : lines;
-      return {title, body: bodyLines.join('\n').trim(), comment};
+      return {title,body: bodyLines.join('\n').trim(),comment};
     }
 
     const defaultSlideTheme = {
@@ -739,7 +739,7 @@
     }
 
     function calculateSlideBodyScale(markdown,width,height,fitToPage=true){
-      if(!fitToPage) return 1;
+      if(!fitToPage)return 1;
       const parts = getSlideParts(markdown);
       const theme = getSlideTheme();
       const paddingVertical = height * 0.048;
@@ -797,7 +797,7 @@
     }
 
     function estimateSlideBodyScale(markdown,width,height,fitToPage=true){
-      if(!fitToPage) return 1;
+      if(!fitToPage)return 1;
       if(Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0){
         return calculateSlideBodyScale(markdown,width,height,fitToPage);
       }
@@ -833,7 +833,7 @@
       if(parts.comment['line-height']) themeOverrides.contentLineHeight = parts.comment['line-height'];
       if(parts.comment['font-size']) themeOverrides.contentFontSize = parts.comment['font-size'];
       const theme = getSlideTheme(themeOverrides);
-      let titleSize = Math.max(18, Math.round(width * 0.06));
+      let titleSize = Math.max(18,Math.round(width * 0.06));
       if(parts.title.length > 40) titleSize = 18;
       const htmlBody = renderSlideMarkdown(parts.body);
       return '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: https: http:; style-src \'unsafe-inline\'; font-src data:; connect-src \'none\'; media-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff;color:#111827;font-family:'+theme.fontFamily+'}.slide{box-sizing:border-box;width:100vw;height:100vh;padding:4.8vh 5.2vw;display:flex;flex-direction:column;gap:2.3vh}.slide-title{flex:0 0 auto;margin:0;font-size:min(var(--title-size),5vw);font-weight:'+theme.titleFontWeight+';color:'+theme.titleColor+';letter-spacing:0;overflow-wrap:anywhere}.slide-body{min-height:0;flex:1;'+bodyOverflow+'}.slide-fit{transform:scale(var(--body-scale));transform-origin:top left;width:calc(100% / var(--body-scale));font-size:'+theme.contentFontSize+';line-height:'+theme.contentLineHeight+';color:'+theme.bodyColor+'}.slide-fit>*:first-child{margin-top:0}.slide-fit>*:last-child{margin-bottom:0}h2{font-size:1.38em;line-height:1.12;margin:.18em 0 .32em}h3{font-size:1.16em;line-height:1.16;margin:.18em 0 .3em}p,ul,ol,blockquote,pre{margin:.34em 0}ul,ol{padding-left:1.2em}li{margin:.12em 0}img{display:block;max-width:100%;max-height:34vh;object-fit:contain}pre{white-space:pre-wrap;word-break:break-word;background:#f1f5f9;border-radius:12px;padding:.55em;font-size:.78em;line-height:1.22}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.84em}table{width:100%;border-collapse:collapse;margin:1em 0;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,0.08)}th,td{padding:12px 14px;border-bottom:1px solid #e2e8f0;text-align:left}th{background:#f8fafc;font-weight:700;color:#1f2937}tr:last-child td{border-bottom:0}tbody tr:hover{background:rgba(59,130,246,0.05)}a{color:#0369a1;text-decoration:underline;text-underline-offset:3px}blockquote{border-left:4px solid #bae6fd;padding-left:.75em;color:#475569}</style></head><body><main class="slide" style="--title-size:'+titleSize+'px;--body-scale:'+scale.toFixed(3)+'"><h1 class="slide-title">'+escapeHtmlText(parts.title)+'</h1><section class="slide-body"><div class="slide-fit">'+htmlBody+'</div></section></main></body></html>';
