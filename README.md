@@ -71,8 +71,8 @@ The slide mode treats Markdown as a deck: each level-one heading (`#`) starts a 
 
 ## Security
 
-- HTML, Markdown, and slide previews run in sandboxed `iframe`s with no `allow-*` permissions.
-- The preview document uses a strict `Content-Security-Policy` (`default-src 'none'`) to block scripts, active content, and unneeded network access by default. Slide image rendering allows `data:`, `https:`, and `http:` sources so Markdown image links can render.
+- HTML and Markdown previews run in sandboxed `iframe`s with no `allow-*` permissions. Slide previews remain sandboxed and allow scripts only for their isolated fitting code.
+- The preview document uses a strict `Content-Security-Policy` (`default-src 'none'`) to block active content and unneeded network access by default. Slide image rendering allows `data:`, `https:`, and `http:` sources so Markdown image links can render, and slide frames allow only their generated nonce-bearing fitting script.
 - Markdown preview uses `markdown-it` with HTML enabled (`html: true`) so Markdown can include inline HTML and data URL assets; the sandboxed iframe/CSP contain any rendered content.
 - If the browser does not support required secure iframe features (`sandbox` + `srcdoc`), HTML/Markdown/slide preview is disabled and the UI shows a clear explanation (`Secure preview unavailable`).
 

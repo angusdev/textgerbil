@@ -116,7 +116,7 @@ Perfect for presentations, tutorials, or slide decks.
 
 🔒 HTML and Markdown previews run in sandboxed iframes
 
-🔒 Strict Content-Security-Policy prevents scripts and unwanted content
+🔒 Strict Content-Security-Policy prevents unwanted content and only allows the generated slide fitting script
 
 🔒 Raw HTML is escaped, not executed
 

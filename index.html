@@ -295,7 +295,7 @@
         </button>
       </div>
       <div class="slide-present-stage">
-        <iframe id="slidePresentFrame" class="slide-present-frame" sandbox="" referrerpolicy="no-referrer" title="Current slide"></iframe>
+        <iframe id="slidePresentFrame" class="slide-present-frame" sandbox="allow-scripts" referrerpolicy="no-referrer" title="Current slide"></iframe>
       </div>
     </div>
     <dialog id="confirmDialog" class="p-0 rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
@@ -726,7 +726,7 @@
 
     const defaultSlideTheme = {
       fontFamily: 'ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif',
-      contentFontSize: 'min(22px,3.8vw)',
+      contentFontSize: '22px',
       contentLineHeight: '1.5',
       titleHeightPercent: 0.10,
       titleFontWeight: '750',
@@ -738,113 +738,43 @@
       return Object.assign({},defaultSlideTheme,overrides||{});
     }
 
-    function calculateSlideBodyScale(markdown,width,height,fitToPage=true){
-      if(!fitToPage)return 1;
-      const parts = getSlideParts(markdown);
-      const theme = getSlideTheme();
-      const paddingVertical = height * 0.048;
-      const paddingHorizontal = width * 0.052;
-      const gap = height * 0.023;
-      const titleHeight = height * theme.titleHeightPercent;
-      const availableWidth = Math.max(1,width-(paddingHorizontal*2));
-      const availableHeight = Math.max(1,height-(paddingVertical*2)-titleHeight-gap);
-      const bodyHtml = renderSlideMarkdown(parts.body);
-      const measurement = document.createElement('div');
-      measurement.style.position = 'fixed';
-      measurement.style.inset = '0';
-      measurement.style.left = '-99999px';
-      measurement.style.top = '-99999px';
-      measurement.style.visibility = 'hidden';
-      measurement.style.pointerEvents = 'none';
-      measurement.style.width = availableWidth + 'px';
-      measurement.style.overflow = 'hidden';
-      measurement.style.fontFamily = theme.fontFamily;
-      const style = document.createElement('style');
-      const fitEl = document.createElement('div');
-      fitEl.className = 'slide-fit';
-      fitEl.innerHTML = bodyHtml;
-      measurement.appendChild(style);
-      measurement.appendChild(fitEl);
-      document.body.appendChild(measurement);
-      const baseFontSize = Math.min(22,availableWidth*0.038);
-      function updateStyle(contentWidth){
-        style.textContent =
-          '.slide-fit{width:' + contentWidth + 'px;font-size:' + baseFontSize + 'px;line-height:' + theme.contentLineHeight + ';color:' + theme.bodyColor + '}' +
-          '.slide-fit>*:first-child{margin-top:0}.slide-fit>*:last-child{margin-bottom:0}' +
-          'h2{font-size:1.38em;line-height:1.12;margin:.18em 0 .32em}h3{font-size:1.16em;line-height:1.16;margin:.18em 0 .3em}' +
-          'p,ul,ol,blockquote,pre{margin:.34em 0}ul,ol{padding-left:1.2em}li{margin:.12em 0}' +
-          'img{display:block;max-width:100%;max-height:' + Math.round(height * 0.34) + 'px;object-fit:contain}' +
-          'pre{white-space:pre-wrap;word-break:break-word;background:#f1f5f9;border-radius:8px;padding:.55em;font-size:.78em;line-height:1.22}' +
-          'code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.84em}' +
-          'a{color:#0369a1;text-decoration:underline;text-underline-offset:3px}' +
-          'blockquote{border-left:4px solid #bae6fd;padding-left:.75em;color:#475569}';
-      }
-      function measureHeight(contentWidth){
-        updateStyle(contentWidth);
-        fitEl.style.width = contentWidth + 'px';
-        return fitEl.scrollHeight;
-      }
-      let scale = 1;
-      for(let i=0;i<3;i++){
-        const contentWidth = Math.max(1,Math.round(availableWidth/scale));
-        const measured = measureHeight(contentWidth);
-        const nextScale = Math.min(1,availableHeight/measured);
-        if(Math.abs(nextScale-scale)<0.005){scale=nextScale;break;}
-        scale = nextScale;
-      }
-      document.body.removeChild(measurement);
-      return Math.max(0.38,Math.min(1,scale));
-    }
-
-    function estimateSlideBodyScale(markdown,width,height,fitToPage=true){
-      if(!fitToPage)return 1;
-      if(Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0){
-        return calculateSlideBodyScale(markdown,width,height,fitToPage);
-      }
-      const body = getSlideParts(markdown).body;
-      if(!body)return 1;
-      const lines = body.split(/\r?\n/);
-      const images = (body.match(/!\[[^\]]*\]\([^)]+\)/g) || []).length;
-      const fencedBlocks = (body.match(/```[\s\S]*?```/g) || []);
-      const codeLines = fencedBlocks.reduce((count,block)=>count + block.split(/\r?\n/).length,0);
-      const visualRows = lines.reduce((sum,line)=>{
-        const trimmed = line.trim();
-        if(!trimmed)return sum + 0.35;
-        if(/^!\[[^\]]*\]\([^)]+\)/.test(trimmed))return sum + 6.5;
-        if(/^#{2,6}\s+/.test(trimmed))return sum + 1.7;
-        if(/^[-*+]\s+|^\d+\.\s+/.test(trimmed))return sum + Math.max(1,Math.ceil(trimmed.length / 58));
-        return sum + Math.max(1,Math.ceil(trimmed.length / 68));
-      },0) + (images * 1.5) + (codeLines * 0.45);
-      const pressure = Math.max(1,visualRows / 12.5);
-      return Math.max(0.38,Math.min(1,1 / pressure));
-    }
-
     function renderSlideMarkdown(markdown){
       initMarkdownIt();
       if(!md)return '<p>'+escapeHtmlText(markdown)+'</p>';
       return md.render(markdown || '');
     }
 
-    function buildSandboxedSlideSrcdoc(markdown,width,height,bodyOverflow='overflow:hidden'){
+    function createCspNonce(){
+      const bytes = new Uint8Array(12);
+      if(window.crypto && window.crypto.getRandomValues){
+        window.crypto.getRandomValues(bytes);
+        return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+      }
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function buildSandboxedSlideSrcdoc(markdown,width,height,bodyOverflow='overflow:hidden',forceFitToPage=false){
       const parts = getSlideParts(markdown);
-      const fitToPage = parts.comment['fit-to-page'] !== 'false';
-      const scale = estimateSlideBodyScale(markdown,width,height,fitToPage);
+      const fitToPage = forceFitToPage || parts.comment['fit-to-page'] !== 'false';
       const themeOverrides = {};
       if(parts.comment['line-height']) themeOverrides.contentLineHeight = parts.comment['line-height'];
       if(parts.comment['font-size']) themeOverrides.contentFontSize = parts.comment['font-size'];
       const theme = getSlideTheme(themeOverrides);
-      let titleSize = Math.max(18,Math.round(width * 0.06));
+      let titleSize = Number.isFinite(width) && width > 0 ? Math.max(18,Math.round(width * 0.06)) : 36;
       if(parts.title.length > 40) titleSize = 18;
       const htmlBody = renderSlideMarkdown(parts.body);
-      return '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: https: http:; style-src \'unsafe-inline\'; font-src data:; connect-src \'none\'; media-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff;color:#111827;font-family:'+theme.fontFamily+'}.slide{box-sizing:border-box;width:100vw;height:100vh;padding:4.8vh 5.2vw;display:flex;flex-direction:column;gap:2.3vh}.slide-title{flex:0 0 auto;margin:0;font-size:min(var(--title-size),5vw);font-weight:'+theme.titleFontWeight+';color:'+theme.titleColor+';letter-spacing:0;overflow-wrap:anywhere}.slide-body{min-height:0;flex:1;'+bodyOverflow+'}.slide-fit{transform:scale(var(--body-scale));transform-origin:top left;width:calc(100% / var(--body-scale));font-size:'+theme.contentFontSize+';line-height:'+theme.contentLineHeight+';color:'+theme.bodyColor+'}.slide-fit>*:first-child{margin-top:0}.slide-fit>*:last-child{margin-bottom:0}h2{font-size:1.38em;line-height:1.12;margin:.18em 0 .32em}h3{font-size:1.16em;line-height:1.16;margin:.18em 0 .3em}p,ul,ol,blockquote,pre{margin:.34em 0}ul,ol{padding-left:1.2em}li{margin:.12em 0}img{display:block;max-width:100%;max-height:34vh;object-fit:contain}pre{white-space:pre-wrap;word-break:break-word;background:#f1f5f9;border-radius:12px;padding:.55em;font-size:.78em;line-height:1.22}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.84em}table{width:100%;border-collapse:collapse;margin:1em 0;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,0.08)}th,td{padding:12px 14px;border-bottom:1px solid #e2e8f0;text-align:left}th{background:#f8fafc;font-weight:700;color:#1f2937}tr:last-child td{border-bottom:0}tbody tr:hover{background:rgba(59,130,246,0.05)}a{color:#0369a1;text-decoration:underline;text-underline-offset:3px}blockquote{border-left:4px solid #bae6fd;padding-left:.75em;color:#475569}</style></head><body><main class="slide" style="--title-size:'+titleSize+'px;--body-scale:'+scale.toFixed(3)+'"><h1 class="slide-title">'+escapeHtmlText(parts.title)+'</h1><section class="slide-body"><div class="slide-fit">'+htmlBody+'</div></section></main></body></html>';
+      const nonce = createCspNonce();
+      const fitScript = fitToPage ? '<scr'+'ipt nonce="'+nonce+'">(function(){var minZoom=0.01;var body=document.querySelector(\'.slide-body\');var content=document.querySelector(\'.slide-content\');if(!body||!content)return;function apply(zoom){content.style.zoom=zoom.toFixed(3)}function fitSlide(){apply(1);var pageHeight=body.clientHeight;var pageWidth=body.clientWidth;var contentHeight=content.scrollHeight;var contentWidth=content.scrollWidth;if(!pageHeight||!contentHeight)return;var zoom=Math.min(1,pageHeight/contentHeight,pageWidth&&contentWidth?pageWidth/contentWidth:1);if(!isFinite(zoom)||zoom<=0)zoom=1;zoom=Math.max(minZoom,zoom*0.995);apply(zoom);if(body.scrollHeight>body.clientHeight+1){var correction=body.clientHeight/body.scrollHeight;zoom=Math.max(minZoom,zoom*correction*0.995);apply(zoom)}}function scheduleFit(){requestAnimationFrame(function(){fitSlide();setTimeout(fitSlide,80)})}scheduleFit();window.addEventListener(\'load\',scheduleFit);window.addEventListener(\'resize\',scheduleFit);Array.prototype.forEach.call(content.querySelectorAll(\'img\'),function(img){img.addEventListener(\'load\',scheduleFit)})})();</scr'+'ipt>' : '';
+      return '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'nonce-'+nonce+'\'; img-src data: https: http:; style-src \'unsafe-inline\'; font-src data:; connect-src \'none\'; media-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff;color:#111827;font-family:'+theme.fontFamily+'}.slide{box-sizing:border-box;width:100vw;height:100vh;padding:4.8vh 5.2vw;display:flex;flex-direction:column;gap:2.3vh}.slide-title{flex:0 0 auto;margin:0;font-size:min(var(--title-size),5vw);font-weight:'+theme.titleFontWeight+';color:'+theme.titleColor+';letter-spacing:0;overflow-wrap:anywhere}.slide-body{min-height:0;flex:1;'+bodyOverflow+'}.slide-content{zoom:1;font-size:'+theme.contentFontSize+';line-height:'+theme.contentLineHeight+';color:'+theme.bodyColor+'}.slide-content>*:first-child{margin-top:0}.slide-content>*:last-child{margin-bottom:0}h2{font-size:1.38em;line-height:1.12;margin:.18em 0 .32em}h3{font-size:1.16em;line-height:1.16;margin:.18em 0 .3em}p,ul,ol,blockquote,pre{margin:.34em 0}ul,ol{padding-left:1.2em}li{margin:.12em 0}img{display:block;max-width:100%;max-height:34vh;object-fit:contain}pre{white-space:pre-wrap;word-break:break-word;background:#f1f5f9;border-radius:12px;padding:.55em;font-size:.78em;line-height:1.22}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.84em}table{width:100%;border-collapse:collapse;margin:1em 0;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,0.08)}th,td{padding:12px 14px;border-bottom:1px solid #e2e8f0;text-align:left}th{background:#f8fafc;font-weight:700;color:#1f2937}tr:last-child td{border-bottom:0}tbody tr:hover{background:rgba(59,130,246,0.05)}a{color:#0369a1;text-decoration:underline;text-underline-offset:3px}blockquote{border-left:4px solid #bae6fd;padding-left:.75em;color:#475569}</style></head><body><main class="slide" style="--title-size:'+titleSize+'px"><h1 class="slide-title">'+escapeHtmlText(parts.title)+'</h1><section class="slide-body"><div class="slide-content">'+htmlBody+'</div></section>'+fitScript+'</main></body></html>';
     }
 
     function buildSandboxedSlideIframe(markdown,title,width,height){
       const iframe=document.createElement('iframe');
       iframe.className='slide-preview-frame';
+      iframe.setAttribute('sandbox','allow-scripts');
       iframe.referrerPolicy='no-referrer';
       iframe.title=title || getSlideTitle(markdown);
-      iframe.srcdoc=buildSandboxedSlideSrcdoc(markdown,width,height);
+      iframe.srcdoc=buildSandboxedSlideSrcdoc(markdown,width,height,'overflow:hidden',true);
       return iframe;
     }
 
